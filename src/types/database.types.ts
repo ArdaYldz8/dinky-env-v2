@@ -24,6 +24,8 @@ export interface Database {
           hire_date: string | null
           salary: number | null
           is_active: boolean
+          role: 'patron' | 'genel_mudur' | 'muhasebeci' | 'depocu' | 'usta' | 'admin' | null
+          user_id: string | null
           created_at: string
           updated_at: string
         }
