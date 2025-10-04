@@ -28,9 +28,12 @@ dist-ssr
 
 # Backup files
 backups/
-*.sql
 *.xlsx
 *.py
+
+# SQL files (except migrations)
+*.sql
+!supabase-migrations/*.sql
 
 # Test coverage
 coverage/
