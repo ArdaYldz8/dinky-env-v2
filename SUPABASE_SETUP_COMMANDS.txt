@@ -5,9 +5,10 @@ DINKY METAL ERP V2 - SUPABASE KURULUM KOMUTLARI
 1. SUPABASE SQL EDITOR'DE ÇALIŞTIR (İLK ÖNCE):
 ===================================================================
 
--- Migration 1: Rol sistemi oluştur
+-- Migration 1: Rol sistemi oluştur (email sütununu da ekler)
 -- Dosya: supabase-migrations/01_add_roles_system.sql
 -- Bu dosyanın tüm içeriğini SQL Editor'e yapıştır ve çalıştır
+-- NOT: Bu migration employees tablosuna email, role ve user_id sütunlarını ekler
 
 
 -- Migration 2: Kullanıcı hesapları hazırlık
