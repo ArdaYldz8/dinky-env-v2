@@ -74,4 +74,5 @@ const useAuthStore = create<AuthState>((set) => ({
   setSession: (session: Session | null) => set({ session, user: session?.user || null }),
 }))
 
+export { useAuthStore }
 export default useAuthStore

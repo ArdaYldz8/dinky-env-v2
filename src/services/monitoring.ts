@@ -96,9 +96,17 @@ export function addBreadcrumb(message: string, category: string, data?: Record<s
 }
 
 // Performance monitoring for critical operations
-export function startTransaction(name: string, op: string) {
-  return Sentry.startTransaction({
-    name,
-    op,
-  })
+// Replaced startTransaction with startSpan (Sentry v10 migration)
+export function measurePerformance<T>(
+  name: string,
+  op: string,
+  callback: () => T | Promise<T>
+): T | Promise<T> {
+  return Sentry.startSpan(
+    {
+      name,
+      op,
+    },
+    callback
+  )
 }
