@@ -409,50 +409,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <i className="fas fa-bolt text-yellow-500"></i>
-          Hızlı İşlemler
-        </h3>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <button
-            onClick={() => navigate('/projects')}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-blue-200 hover:border-blue-500 hover:bg-blue-50 transition-colors"
-          >
-            <i className="fas fa-plus-circle text-2xl text-blue-600"></i>
-            <span className="text-sm font-medium text-gray-700">Yeni Proje</span>
-          </button>
-          <button
-            onClick={() => navigate('/stock')}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-green-200 hover:border-green-500 hover:bg-green-50 transition-colors"
-          >
-            <i className="fas fa-box text-2xl text-green-600"></i>
-            <span className="text-sm font-medium text-gray-700">Stok Girişi</span>
-          </button>
-          <button
-            onClick={() => navigate('/attendance')}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-purple-200 hover:border-purple-500 hover:bg-purple-50 transition-colors"
-          >
-            <i className="fas fa-calendar-check text-2xl text-purple-600"></i>
-            <span className="text-sm font-medium text-gray-700">Puantaj</span>
-          </button>
-          <button
-            onClick={() => navigate('/employees')}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-indigo-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors"
-          >
-            <i className="fas fa-user-plus text-2xl text-indigo-600"></i>
-            <span className="text-sm font-medium text-gray-700">Yeni Personel</span>
-          </button>
-          <button
-            onClick={() => navigate('/settings')}
-            className="flex flex-col items-center gap-2 p-4 rounded-lg border-2 border-gray-200 hover:border-gray-500 hover:bg-gray-50 transition-colors"
-          >
-            <i className="fas fa-cog text-2xl text-gray-600"></i>
-            <span className="text-sm font-medium text-gray-700">Ayarlar</span>
-          </button>
-        </div>
-      </div>
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -536,57 +492,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Project Progress Chart */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <i className="fas fa-tasks text-purple-600"></i>
-              Proje İlerleme Durumu
-            </h3>
-            {chartData.projectNames.length > 0 ? (
-              <Chart
-                options={{
-                  chart: {
-                    type: 'bar',
-                    height: 300,
-                    toolbar: { show: false }
-                  },
-                  plotOptions: {
-                    bar: {
-                      horizontal: true,
-                      borderRadius: 4,
-                      dataLabels: { position: 'top' }
-                    }
-                  },
-                  colors: ['#8b5cf6'],
-                  xaxis: {
-                    categories: chartData.projectNames,
-                    max: 100,
-                    labels: { formatter: (val) => val + '%' }
-                  },
-                  dataLabels: {
-                    enabled: true,
-                    formatter: (val) => val + '%',
-                    style: { fontSize: '12px', fontWeight: 600 }
-                  },
-                  tooltip: {
-                    y: { formatter: (val) => val + '% tamamlandı' }
-                  }
-                }}
-                series={[
-                  { name: 'İlerleme', data: chartData.projectProgress }
-                ]}
-                type="bar"
-                height={300}
-              />
-            ) : (
-              <div className="h-64 flex items-center justify-center text-gray-400">
-                <div className="text-center">
-                  <i className="fas fa-chart-bar text-4xl mb-2"></i>
-                  <p>Devam eden proje yok</p>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Right Column - Tasks (1/4) */}
