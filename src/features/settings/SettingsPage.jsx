@@ -223,11 +223,29 @@ export default function SettingsPage() {
         if (error) throw error
         showSuccess('Proje başarıyla güncellendi!')
       } else {
-        const { error } = await supabase
+        // Insert into work_locations first
+        const { data: workLocationData, error: workLocationError } = await supabase
           .from('work_locations')
           .insert([cleanedData])
+          .select()
+          .single()
 
-        if (error) throw error
+        if (workLocationError) throw workLocationError
+
+        // Also insert into projects table as internal_location
+        const projectData = {
+          project_name: formData.project_name.trim(),
+          project_type: 'internal_location',
+          status: 'Aktif',
+          description: formData.location.trim() || null,
+        }
+
+        const { error: projectError } = await supabase
+          .from('projects')
+          .insert([projectData])
+
+        if (projectError) throw projectError
+
         showSuccess('Proje başarıyla eklendi!')
       }
 
