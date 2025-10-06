@@ -4,8 +4,11 @@ import Modal from '../../shared/components/Modal'
 import Button from '../../shared/components/Button'
 import { useToast } from '../../shared/hooks'
 import { handleSupabaseError } from '../../utils/errorHandler'
+import { useUserRole } from '../../hooks/useUserRole'
+import { CAN_VIEW_ACTIVITY_LOGS, canPerformAction } from '../../lib/roles'
 
 export default function SettingsPage() {
+  const { role } = useUserRole()
   const [activeTab, setActiveTab] = useState('projects')
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +37,11 @@ export default function SettingsPage() {
     employeeId: '',
   })
 
+  // Activity access control
+  const [activityPassword, setActivityPassword] = useState('')
+  const [activityUnlocked, setActivityUnlocked] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+
   const [formData, setFormData] = useState({
     project_name: '',
     location: '',
@@ -47,11 +55,35 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (activeTab === 'activity') {
-      fetchActivityData()
+      // Check role access first
+      if (!canPerformAction(role, CAN_VIEW_ACTIVITY_LOGS)) {
+        showError('Bu alana erişim yetkiniz yok. Sadece Patron ve Admin erişebilir.')
+        setActiveTab('projects')
+        return
+      }
+      // Reset unlock state when switching to activity tab
+      setActivityUnlocked(false)
+      setActivityPassword('')
+      setPasswordError('')
     } else if (activeTab === 'overtime') {
       fetchOvertimeRecords()
     }
   }, [activeTab])
+
+  const handleActivityPasswordSubmit = (e) => {
+    e.preventDefault()
+    // Simple password check (you can make this more secure)
+    const ACTIVITY_PASSWORD = 'dinky2025'
+
+    if (activityPassword === ACTIVITY_PASSWORD) {
+      setActivityUnlocked(true)
+      setPasswordError('')
+      fetchActivityData()
+    } else {
+      setPasswordError('Hatalı şifre! Lütfen tekrar deneyin.')
+      setActivityPassword('')
+    }
+  }
 
   const fetchProjects = async () => {
     try {
@@ -479,6 +511,46 @@ export default function SettingsPage() {
       {/* Activity Tab Content */}
       {activeTab === 'activity' && (
         <div className="space-y-6">
+          {/* Password Protection Gate */}
+          {!activityUnlocked ? (
+            <div className="bg-white rounded-lg shadow p-8">
+              <div className="max-w-md mx-auto text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-lock text-3xl text-red-600"></i>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Güvenlik Doğrulaması</h3>
+                <p className="text-gray-600 mb-6">
+                  Aktivite İzleme bölümüne erişmek için şifre gereklidir.
+                  <br />
+                  <span className="text-sm text-red-600">Sadece Patron ve Admin erişebilir.</span>
+                </p>
+                <form onSubmit={handleActivityPasswordSubmit} className="space-y-4">
+                  <div>
+                    <input
+                      type="password"
+                      value={activityPassword}
+                      onChange={(e) => setActivityPassword(e.target.value)}
+                      placeholder="Şifre"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-center text-lg"
+                      autoFocus
+                    />
+                    {passwordError && (
+                      <p className="text-red-600 text-sm mt-2">{passwordError}</p>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <i className="fas fa-unlock"></i>
+                    Erişim Sağla
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            /* Original Activity Content */
+            <div className="space-y-6">
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtreler</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -665,6 +737,8 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+            </div>
+          )}
         </div>
       )}
 

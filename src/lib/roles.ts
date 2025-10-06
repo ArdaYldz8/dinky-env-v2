@@ -33,14 +33,16 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     '/customers',
     '/quality-control',
     '/reports',
-    '/tasks',
     '/attendance',
+    '/settings',
   ],
   muhasebeci: [
     '/dashboard',
     '/projects',
     '/customers',
     '/reports',
+    '/employees',
+    '/attendance',
   ],
   depocu: [
     '/dashboard',
@@ -77,8 +79,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 // Role descriptions
 export const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   patron: 'Tam yetki - Tüm modüllere erişim',
-  genel_mudur: 'Yönetim yetkisi - Ayarlar hariç tüm modüller',
-  muhasebeci: 'Muhasebe ve raporlama erişimi',
+  genel_mudur: 'Yönetim yetkisi - Görevler hariç tüm modüller',
+  muhasebeci: 'Muhasebe, raporlama, personel ve puantaj erişimi',
   depocu: 'Stok yönetimi erişimi',
   usta: 'Kalite kontrol erişimi',
   admin: 'Sistem yönetimi yetkisi',
@@ -108,13 +110,14 @@ export function getAllowedRoutes(userRole: UserRole | null): string[] {
 /**
  * Check if role can perform specific actions
  */
-export const CAN_MANAGE_EMPLOYEES = ['patron', 'genel_mudur', 'admin'];
+export const CAN_MANAGE_EMPLOYEES = ['patron', 'genel_mudur', 'muhasebeci', 'admin'];
 export const CAN_MANAGE_STOCK = ['patron', 'genel_mudur', 'depocu', 'admin'];
 export const CAN_MANAGE_PROJECTS = ['patron', 'genel_mudur', 'admin'];
 export const CAN_MANAGE_QUALITY = ['patron', 'genel_mudur', 'usta', 'admin'];
 export const CAN_VIEW_REPORTS = ['patron', 'genel_mudur', 'muhasebeci', 'admin'];
 export const CAN_MANAGE_CUSTOMERS = ['patron', 'genel_mudur', 'muhasebeci', 'admin'];
-export const CAN_CHANGE_SETTINGS = ['patron', 'admin'];
+export const CAN_CHANGE_SETTINGS = ['patron', 'genel_mudur', 'admin'];
+export const CAN_VIEW_ACTIVITY_LOGS = ['patron', 'admin'];
 
 /**
  * Helper function to check if user can perform action
