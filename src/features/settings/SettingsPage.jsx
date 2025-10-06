@@ -207,8 +207,10 @@ export default function SettingsPage() {
 
     try {
       const cleanedData = {
+        name: formData.project_name.trim(),
         project_name: formData.project_name.trim(),
         location: formData.location.trim() || null,
+        location_type: 'project',
         is_active: formData.is_active,
       }
 
