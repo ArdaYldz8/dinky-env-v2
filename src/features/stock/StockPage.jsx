@@ -114,7 +114,8 @@ export default function StockPage() {
       // Apply search filter if exists
       if (searchQuery) {
         const searchPattern = `%${searchQuery}%`
-        const searchFilter = `item_name.ilike.${searchPattern},item_code.ilike.${searchPattern},category.ilike.${searchPattern},subcategory.ilike.${searchPattern}`
+        // PostgREST requires OR conditions to be wrapped in parentheses
+        const searchFilter = `(item_name.ilike.${searchPattern},item_code.ilike.${searchPattern},category.ilike.${searchPattern},subcategory.ilike.${searchPattern})`
         countQuery = countQuery.or(searchFilter)
         dataQuery = dataQuery.or(searchFilter)
       }
