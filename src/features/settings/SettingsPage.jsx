@@ -210,7 +210,7 @@ export default function SettingsPage() {
         name: formData.project_name.trim(),
         project_name: formData.project_name.trim(),
         location: formData.location.trim() || null,
-        location_type: 'project',
+        location_type: 'internal',
         is_active: formData.is_active,
       }
 
