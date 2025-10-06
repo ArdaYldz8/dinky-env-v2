@@ -100,64 +100,60 @@ export default function StockPage() {
     try {
       setLoading(true)
 
-      // Build base query
-      let countQuery = supabase
+      // Start with base query - always filter active items
+      let query = supabase
         .from('stock_items')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact' })
         .eq('is_active', true)
 
-      let dataQuery = supabase
-        .from('stock_items')
-        .select('*')
-        .eq('is_active', true)
-
-      // Apply search filter if exists
-      if (searchQuery) {
-        const searchPattern = `%${searchQuery}%`
-        // PostgREST requires OR conditions to be wrapped in parentheses
-        const searchFilter = `(item_name.ilike.${searchPattern},item_code.ilike.${searchPattern},category.ilike.${searchPattern},subcategory.ilike.${searchPattern})`
-        countQuery = countQuery.or(searchFilter)
-        dataQuery = dataQuery.or(searchFilter)
-      }
-
-      // Apply category filter
+      // Apply category filter first (server-side)
       if (categoryFilter) {
         if (categoryFilter === '(Kategorisiz)') {
-          countQuery = countQuery.is('category', null)
-          dataQuery = dataQuery.is('category', null)
+          query = query.is('category', null)
         } else {
-          countQuery = countQuery.eq('category', categoryFilter)
-          dataQuery = dataQuery.eq('category', categoryFilter)
+          query = query.eq('category', categoryFilter)
         }
       }
 
-      // Apply unit filter
+      // Apply unit filter (server-side)
       if (unitFilter) {
         if (unitFilter === '(Birimsiz)') {
-          countQuery = countQuery.is('unit', null)
-          dataQuery = dataQuery.is('unit', null)
+          query = query.is('unit', null)
         } else {
-          countQuery = countQuery.eq('unit', unitFilter)
-          dataQuery = dataQuery.eq('unit', unitFilter)
+          query = query.eq('unit', unitFilter)
         }
       }
 
-      // Get total count
-      const { count, error: countError } = await countQuery
-      if (countError) throw countError
-
-      // Apply pagination
+      // Execute query with pagination
       const from = (currentPage - 1) * itemsPerPage
       const to = from + itemsPerPage - 1
 
-      const { data, error } = await dataQuery
+      const { data, count, error } = await query
         .order('created_at', { ascending: false })
         .range(from, to)
 
       if (error) throw error
 
+      // Apply search filter (client-side for reliability)
+      let filteredData = data || []
+
+      if (searchQuery && searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase().trim()
+        filteredData = filteredData.filter(item => {
+          const itemName = (item.item_name || '').toLowerCase()
+          const itemCode = (item.item_code || '').toLowerCase()
+          const category = (item.category || '').toLowerCase()
+          const subcategory = (item.subcategory || '').toLowerCase()
+
+          return itemName.includes(searchLower) ||
+                 itemCode.includes(searchLower) ||
+                 category.includes(searchLower) ||
+                 subcategory.includes(searchLower)
+        })
+      }
+
       setTotalCount(count || 0)
-      setStockItems(data || [])
+      setStockItems(filteredData)
     } catch (error) {
       showToast('Veri yüklenirken hata: ' + error.message, 'error')
     } finally {
