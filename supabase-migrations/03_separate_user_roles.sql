@@ -28,6 +28,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS user_roles_updated_at ON user_roles;
 CREATE TRIGGER user_roles_updated_at
   BEFORE UPDATE ON user_roles
   FOR EACH ROW
@@ -56,18 +57,21 @@ $$ LANGUAGE sql SECURITY DEFINER;
 ALTER TABLE user_roles ENABLE ROW LEVEL SECURITY;
 
 -- 7. Create RLS policies for user_roles
+DROP POLICY IF EXISTS "User roles: Full access for patron and admin" ON user_roles;
 CREATE POLICY "User roles: Full access for patron and admin"
   ON user_roles FOR ALL
   USING (
     get_user_role(auth.uid()) IN ('patron', 'admin')
   );
 
+DROP POLICY IF EXISTS "User roles: Read access for genel_mudur" ON user_roles;
 CREATE POLICY "User roles: Read access for genel_mudur"
   ON user_roles FOR SELECT
   USING (
     get_user_role(auth.uid()) = 'genel_mudur'
   );
 
+DROP POLICY IF EXISTS "User roles: Self read for all authenticated users" ON user_roles;
 CREATE POLICY "User roles: Self read for all authenticated users"
   ON user_roles FOR SELECT
   USING (user_id = auth.uid());
