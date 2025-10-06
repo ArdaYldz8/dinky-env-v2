@@ -26,11 +26,11 @@ export default function DashboardLayout() {
         name: 'Personel',
         icon: '👥',
         isDropdown: true,
-        roles: ['patron', 'genel_mudur', 'admin'],
+        roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'],
         children: [
-          { name: 'Personel Yönetimi', path: '/employees', icon: '👤' },
-          { name: 'Puantaj', path: '/attendance', icon: '📅' },
-          { name: 'Görevler', path: '/tasks', icon: '✓' },
+          { name: 'Personel Yönetimi', path: '/employees', icon: '👤', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
+          { name: 'Puantaj', path: '/attendance', icon: '📅', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
+          { name: 'Görevler', path: '/tasks', icon: '✓', roles: ['patron', 'admin'] },
         ]
       },
       {
@@ -46,7 +46,7 @@ export default function DashboardLayout() {
       { name: 'Kalite Kontrol', path: '/quality-control', icon: '✅', roles: ['patron', 'genel_mudur', 'usta', 'admin'] },
       { name: 'Stok', path: '/stock', icon: '📦', roles: ['patron', 'genel_mudur', 'depocu', 'admin'] },
       { name: 'Raporlar', path: '/reports', icon: '📈', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
-      { name: 'Ayarlar', path: '/settings', icon: '⚙️', roles: ['patron', 'admin'] },
+      { name: 'Ayarlar', path: '/settings', icon: '⚙️', roles: ['patron', 'genel_mudur', 'admin'] },
     ]
 
     // Filter navigation based on role

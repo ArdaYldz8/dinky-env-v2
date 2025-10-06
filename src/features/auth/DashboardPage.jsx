@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
 import Chart from 'react-apexcharts'
+import { useUserRole } from '../../hooks/useUserRole'
+import { hasAccess } from '../../lib/roles'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { role } = useUserRole()
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
     activeProjects: 0,
@@ -68,8 +71,8 @@ export default function DashboardPage() {
         supabase.from('projects').select('*')
           .eq('project_type', 'customer_project')
           .eq('status', 'Aktif')
-          .gte('end_date', today)
-          .lte('end_date', next7Days.toISOString().split('T')[0]),
+          .gte('planned_end_date', today)
+          .lte('planned_end_date', next7Days.toISOString().split('T')[0]),
         supabase.from('employees').select('*')
       ])
 
@@ -151,7 +154,7 @@ export default function DashboardPage() {
 
       // Process deadline warnings
       const warnings = upcomingDeadlines?.map(project => {
-        const endDate = new Date(project.end_date)
+        const endDate = new Date(project.planned_end_date)
         const daysUntil = Math.ceil((endDate - new Date()) / (1000 * 60 * 60 * 24))
         let urgency = 'warning' // yellow
         if (daysUntil <= 0) urgency = 'danger' // red
@@ -195,17 +198,19 @@ export default function DashboardPage() {
         })
       }
 
-      // Missing attendance records
-      const totalEmployees = employees?.length || 0
-      const recordedToday = attendanceToday?.length || 0
-      if (totalEmployees > recordedToday) {
-        notifs.push({
-          type: 'info',
-          icon: 'fas fa-user-clock',
-          title: 'Eksik Puantaj Kaydı',
-          message: `${totalEmployees - recordedToday} personelin bugünkü puantajı girilmemiş`,
-          action: () => navigate('/attendance')
-        })
+      // Missing attendance records - only show if user has access to attendance
+      if (hasAccess(role, '/attendance')) {
+        const totalEmployees = employees?.length || 0
+        const recordedToday = attendanceToday?.length || 0
+        if (totalEmployees > recordedToday) {
+          notifs.push({
+            type: 'info',
+            icon: 'fas fa-user-clock',
+            title: 'Eksik Puantaj Kaydı',
+            message: `${totalEmployees - recordedToday} personelin bugünkü puantajı girilmemiş`,
+            action: () => navigate('/attendance')
+          })
+        }
       }
 
       // Quality issues
