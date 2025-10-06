@@ -20,9 +20,10 @@ export function useUserRole() {
       try {
         setLoading(true)
         const { data, error: fetchError } = await supabase
-          .from('employees')
-          .select('role, full_name, position')
+          .from('user_roles')
+          .select('role, email, is_active')
           .eq('user_id', user.id)
+          .eq('is_active', true)
           .single()
 
         if (fetchError) throw fetchError

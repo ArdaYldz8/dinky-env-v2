@@ -13,6 +13,19 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_roles: {
+        Row: {
+          id: string
+          user_id: string
+          email: string
+          role: 'patron' | 'genel_mudur' | 'muhasebeci' | 'depocu' | 'usta' | 'admin'
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: Omit<Database['public']['Tables']['user_roles']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Update: Partial<Database['public']['Tables']['user_roles']['Insert']>
+      }
       employees: {
         Row: {
           id: string
