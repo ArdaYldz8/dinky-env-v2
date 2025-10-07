@@ -468,6 +468,43 @@ export const exportWeeklyReportToExcel = (weeklyReport) => {
     }
   })
 
+  // Calculate totals for Excel
+  const totalDaysSum = weeklyReport.data.reduce((sum, emp) => {
+    const days = emp.records.filter(r => r.status === 'Tam Gün').length +
+                 emp.records.filter(r => r.status === 'Yarım Gün').length * 0.5
+    return sum + days
+  }, 0)
+
+  const totalOvertimeSum = weeklyReport.data.reduce((sum, emp) => {
+    return sum + emp.records.reduce((recSum, r) => {
+      const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+      return recSum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+    }, 0)
+  }, 0)
+
+  const totalEarningsSum = weeklyReport.data.reduce((sum, emp) => {
+    return sum + emp.records.reduce((recSum, r) => {
+      const dailyWage = emp.dailyWage
+      const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+      const overtimePayment = dayMultiplier > 0 ? (r.overtime_hours || 0) * (dailyWage / 9) : 0
+      return recSum + (dailyWage * dayMultiplier) + overtimePayment
+    }, 0)
+  }, 0)
+
+  data.push({
+    'Personel': 'TOPLAM',
+    'Pazartesi': '',
+    'Salı': '',
+    'Çarşamba': '',
+    'Perşembe': '',
+    'Cuma': '',
+    'Cumartesi': '',
+    'Pazar': '',
+    'Toplam Gün': totalDaysSum.toFixed(1),
+    'Mesai': totalOvertimeSum.toFixed(1),
+    'Kazanç': totalEarningsSum
+  })
+
   const worksheet = XLSX.utils.json_to_sheet(data)
   applyExcelStyling(worksheet)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Haftalık Rapor')
@@ -529,6 +566,43 @@ export const exportWeeklyReportToPDF = (weeklyReport) => {
       formatCurrencyForPDF(totalEarnings)
     ]
   })
+
+  // Calculate totals
+  const totalDaysSum = weeklyReport.data.reduce((sum, emp) => {
+    const days = emp.records.filter(r => r.status === 'Tam Gün').length +
+                 emp.records.filter(r => r.status === 'Yarım Gün').length * 0.5
+    return sum + days
+  }, 0)
+
+  const totalOvertimeSum = weeklyReport.data.reduce((sum, emp) => {
+    return sum + emp.records.reduce((recSum, r) => {
+      const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+      return recSum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+    }, 0)
+  }, 0)
+
+  const totalEarningsSum = weeklyReport.data.reduce((sum, emp) => {
+    return sum + emp.records.reduce((recSum, r) => {
+      const dailyWage = emp.dailyWage
+      const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+      const overtimePayment = dayMultiplier > 0 ? (r.overtime_hours || 0) * (dailyWage / 9) : 0
+      return recSum + (dailyWage * dayMultiplier) + overtimePayment
+    }, 0)
+  }, 0)
+
+  tableData.push([
+    'TOPLAM',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    totalDaysSum.toFixed(1),
+    totalOvertimeSum.toFixed(1),
+    formatCurrencyForPDF(totalEarningsSum)
+  ])
 
   autoTable(doc, {
     startY: startY + 5,
