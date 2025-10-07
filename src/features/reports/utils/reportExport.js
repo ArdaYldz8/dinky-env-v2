@@ -374,7 +374,7 @@ export const exportDailyReportToPDF = (dailyReport, date) => {
     '',
     formatCurrencyForPDF(totalDayPayment),
     formatCurrencyForPDF(totalOvertimePayment),
-    formatCurrency(totalDayPayment + totalOvertimePayment)
+    formatCurrencyForPDF(totalDayPayment + totalOvertimePayment)
   ])
 
   autoTable(doc, {
