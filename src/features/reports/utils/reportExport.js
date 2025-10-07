@@ -696,22 +696,54 @@ export const exportEmployeeReportToExcel = (employeeReport, startDate, endDate) 
   const salary = employeeReport[0]?.employees?.salary || 0
   const dailyWage = salary / 30
 
-  // Summary sheet
+  // Calculate stats
+  const fullDays = employeeReport.filter(r => r.status === 'Tam Gün').length
+  const halfDays = employeeReport.filter(r => r.status === 'Yarım Gün').length
+  const onLeave = employeeReport.filter(r => r.status === 'İzinli').length
+  const sick = employeeReport.filter(r => r.status === 'Raporlu').length
+  const absent = employeeReport.filter(r => r.status === 'Yok' || r.status === 'Gelmedi').length
+  const totalDays = fullDays + halfDays * 0.5
+  const totalOvertime = employeeReport.reduce((sum, r) => {
+    const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+    return sum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+  }, 0)
+  const workEarnings = totalDays * dailyWage
+  const overtimeEarnings = totalOvertime * (dailyWage / 9)
+  const grossEarnings = workEarnings + overtimeEarnings
+
+  // Summary sheet with complete info
   const summaryData = [
-    { 'Bilgi': 'Ad Soyad', 'Değer': employeeName },
-    { 'Bilgi': 'Birim', 'Değer': position },
-    { 'Bilgi': 'Günlük Ücret', 'Değer': dailyWage },
-    { 'Bilgi': 'Aylık Maaş', 'Değer': salary },
-    {},
-    { 'Bilgi': 'Tam Gün', 'Değer': employeeReport.filter(r => r.status === 'Tam Gün').length },
-    { 'Bilgi': 'Yarım Gün', 'Değer': employeeReport.filter(r => r.status === 'Yarım Gün').length },
-    { 'Bilgi': 'İzinli', 'Değer': employeeReport.filter(r => r.status === 'İzinli').length },
-    { 'Bilgi': 'Raporlu', 'Değer': employeeReport.filter(r => r.status === 'Raporlu').length },
-    { 'Bilgi': 'Gelmedi', 'Değer': employeeReport.filter(r => r.status === 'Yok' || r.status === 'Gelmedi').length },
-    { 'Bilgi': 'Toplam Çalışılan', 'Değer': (employeeReport.filter(r => r.status === 'Tam Gün').length + employeeReport.filter(r => r.status === 'Yarım Gün').length * 0.5).toFixed(1) }
+    { 'Alan': 'PERSONEL BİLGİLERİ', 'Değer': '' },
+    { 'Alan': 'Ad Soyad', 'Değer': employeeName },
+    { 'Alan': 'Birim', 'Değer': position },
+    { 'Alan': 'Günlük Ücret', 'Değer': dailyWage },
+    { 'Alan': 'Aylık Maaş', 'Değer': salary },
+    { 'Alan': 'Dönem', 'Değer': `${formatDate(startDate)} - ${formatDate(endDate)}` },
+    { 'Alan': '', 'Değer': '' },
+    { 'Alan': 'DEVAM DURUMU', 'Değer': '' },
+    { 'Alan': 'Tam Gün', 'Değer': fullDays },
+    { 'Alan': 'Yarım Gün', 'Değer': halfDays },
+    { 'Alan': 'İzinli', 'Değer': onLeave },
+    { 'Alan': 'Raporlu', 'Değer': sick },
+    { 'Alan': 'Gelmedi', 'Değer': absent },
+    { 'Alan': 'Toplam Çalışılan', 'Değer': totalDays.toFixed(1) + ' gün' },
+    { 'Alan': 'Toplam Mesai', 'Değer': totalOvertime + ' saat' },
+    { 'Alan': '', 'Değer': '' },
+    { 'Alan': 'MALİ ÖZET', 'Değer': '' },
+    { 'Alan': 'Çalışma Ücreti', 'Değer': workEarnings },
+    { 'Alan': 'Mesai Ücreti', 'Değer': overtimeEarnings },
+    { 'Alan': 'BRÜT KAZANÇ', 'Değer': grossEarnings },
+    { 'Alan': 'Avanslar', 'Değer': 0 },
+    { 'Alan': 'Kesintiler', 'Değer': 0 },
+    { 'Alan': 'NET ÖDEME', 'Değer': grossEarnings }
   ]
 
   const summarySheet = XLSX.utils.json_to_sheet(summaryData)
+
+  // Apply custom styling to summary
+  const summaryRange = XLSX.utils.decode_range(summarySheet['!ref'])
+  summarySheet['!cols'] = [{ wch: 25 }, { wch: 35 }]
+
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet')
 
   // Detail sheet
@@ -724,7 +756,7 @@ export const exportEmployeeReportToExcel = (employeeReport, startDate, endDate) 
       'Gün': dayNames[date.getDay()],
       'Durum': record.status,
       'Proje': record.location_name || '-',
-      'Mesai': record.overtime_hours || 0
+      'Mesai (Saat)': record.overtime_hours || 0
     }
   })
 
@@ -744,25 +776,7 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
   const salary = employeeReport[0]?.employees?.salary || 0
   const dailyWage = salary / 30
 
-  const startY = addPDFHeader(doc, 'Personel Puantaj Raporu', `${formatDate(startDate)} - ${formatDate(endDate)}`)
-
-  // Employee info box
-  doc.setFillColor(...hexToRgb(COLORS.light))
-  doc.roundedRect(14, startY + 5, 182, 25, 3, 3, 'F')
-
-  doc.setTextColor(...hexToRgb(COLORS.dark))
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Personel Bilgileri', 20, startY + 12)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.text(`Ad Soyad: ${turkishToAscii(employeeName)}`, 20, startY + 18)
-  doc.text(`Birim: ${turkishToAscii(position)}`, 20, startY + 23)
-  doc.text(`Gunluk Ucret: ${formatCurrency(dailyWage)}`, 110, startY + 18)
-  doc.text(`Aylik Maas: ${formatCurrency(salary)}`, 110, startY + 23)
-
-  // Summary stats
+  // Calculate stats
   const fullDays = employeeReport.filter(r => r.status === 'Tam Gün').length
   const halfDays = employeeReport.filter(r => r.status === 'Yarım Gün').length
   const onLeave = employeeReport.filter(r => r.status === 'İzinli').length
@@ -773,43 +787,65 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
     const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
     return sum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
   }, 0)
-
-  const statsY = startY + 38
-  doc.setFontSize(10)
-  doc.setFont('helvetica', 'bold')
-  doc.text('Devam Durumu', 14, statsY)
-
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.text(`Tam Gun: ${fullDays}  |  Yarim Gun: ${halfDays}  |  Izinli: ${onLeave}  |  Raporlu: ${sick}  |  Gelmedi: ${absent}`, 14, statsY + 6)
-  doc.text(`Toplam Calisilan: ${totalDays.toFixed(1)} gun  |  Mesai: ${totalOvertime} saat`, 14, statsY + 12)
-
-  // Financial summary
   const workEarnings = totalDays * dailyWage
   const overtimeEarnings = totalOvertime * (dailyWage / 9)
   const grossEarnings = workEarnings + overtimeEarnings
 
-  const finY = statsY + 20
-  doc.setFontSize(10)
+  const startY = addPDFHeader(doc, 'Personel Puantaj Raporu', `${formatDate(startDate)} - ${formatDate(endDate)}`)
+
+  // Info section with 3 columns
+  const infoY = startY + 5
+
+  // Column 1: Employee Info
+  doc.setFillColor(...hexToRgb(COLORS.light))
+  doc.roundedRect(14, infoY, 58, 35, 2, 2, 'F')
+  doc.setTextColor(...hexToRgb(COLORS.dark))
+  doc.setFontSize(9)
   doc.setFont('helvetica', 'bold')
-  doc.text('Mali Ozet', 14, finY)
+  doc.text('PERSONEL', 17, infoY + 5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(turkishToAscii(employeeName), 17, infoY + 11)
+  doc.text(turkishToAscii(position), 17, infoY + 16)
+  doc.setFontSize(7)
+  doc.text(`Gunluk: ${formatCurrency(dailyWage)}`, 17, infoY + 22)
+  doc.text(`Aylik: ${formatCurrency(salary)}`, 17, infoY + 27)
 
+  // Column 2: Attendance Stats
+  doc.setFillColor(...hexToRgb(COLORS.light))
+  doc.roundedRect(74, infoY, 58, 35, 2, 2, 'F')
+  doc.setFontSize(9)
+  doc.setFont('helvetica', 'bold')
+  doc.text('DEVAM DURUMU', 77, infoY + 5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(`Tam Gun: ${fullDays}  Yarim: ${halfDays}`, 77, infoY + 11)
+  doc.text(`Izinli: ${onLeave}  Raporlu: ${sick}`, 77, infoY + 16)
+  doc.text(`Gelmedi: ${absent}`, 77, infoY + 21)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`Toplam: ${totalDays.toFixed(1)} gun`, 77, infoY + 27)
+
+  // Column 3: Financial Summary
   doc.setFillColor(...hexToRgb(COLORS.success))
-  doc.roundedRect(14, finY + 3, 182, 20, 3, 3, 'F')
-
+  doc.roundedRect(134, infoY, 62, 35, 2, 2, 'F')
   doc.setTextColor(255, 255, 255)
   doc.setFontSize(9)
-  doc.text(`Calisma: ${formatCurrency(workEarnings)}`, 20, finY + 10)
-  doc.text(`Mesai: ${formatCurrency(overtimeEarnings)}`, 80, finY + 10)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.text(`NET ODEME: ${formatCurrency(grossEarnings)}`, 140, finY + 10)
+  doc.text('MALI OZET', 137, infoY + 5)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text(`Calisma: ${formatCurrency(workEarnings)}`, 137, infoY + 11)
+  doc.text(`Mesai: ${formatCurrency(overtimeEarnings)}`, 137, infoY + 16)
+  doc.text(`(${totalOvertime} saat)`, 137, infoY + 21)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text(`${formatCurrency(grossEarnings)}`, 137, infoY + 29)
 
   // Detail table
   doc.setTextColor(...hexToRgb(COLORS.dark))
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
-  doc.text('Puantaj Detaylari', 14, finY + 30)
+  doc.text('Puantaj Detaylari', 14, infoY + 45)
 
   const tableData = employeeReport.map(record => {
     const date = new Date(record.work_date + 'T12:00:00')
@@ -825,7 +861,7 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
   })
 
   autoTable(doc, {
-    startY: finY + 35,
+    startY: infoY + 50,
     head: [['Tarih', 'Gun', 'Durum', 'Proje', 'Mesai']],
     body: tableData,
     theme: 'grid',
