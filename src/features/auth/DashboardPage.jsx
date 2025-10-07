@@ -12,7 +12,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     activeProjects: 0,
     todayAttendance: 0,
-    criticalStock: 0,
+    activeEmployees: 0,
     openIssues: 0
   })
   const [chartData, setChartData] = useState({
@@ -79,15 +79,13 @@ export default function DashboardPage() {
       // Calculate KPI stats
       const activeProjects = projects?.filter(p => p.status === 'Aktif')?.length || 0
       const todayAttendance = attendanceToday?.filter(a => ['Tam Gün', 'Yarım Gün'].includes(a.status))?.length || 0
-      const criticalStock = stockItems?.filter(item =>
-        item.current_stock <= (item.min_stock || 0) && item.min_stock > 0
-      )?.length || 0
+      const activeEmployees = employees?.filter(e => e.is_active === true)?.length || 0
       const openIssues = qualityIssues?.filter(i => !['approved', 'rejected'].includes(i.status))?.length || 0
 
       setStats({
         activeProjects,
         todayAttendance,
-        criticalStock,
+        activeEmployees,
         openIssues
       })
 
@@ -385,16 +383,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Kritik Stok */}
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-lg p-6 text-white">
+        {/* Aktif Personel */}
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-orange-100 text-sm font-medium">Kritik Stok</p>
-              <p className="text-3xl font-bold mt-2">{stats.criticalStock}</p>
-              <p className="text-orange-100 text-xs mt-1">Ürün eksik</p>
+              <p className="text-purple-100 text-sm font-medium">Aktif Personel</p>
+              <p className="text-3xl font-bold mt-2">{stats.activeEmployees}</p>
+              <p className="text-purple-100 text-xs mt-1">Çalışan sayısı</p>
             </div>
             <div className="w-12 h-12 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
-              <i className="fas fa-exclamation-triangle text-2xl"></i>
+              <i className="fas fa-users text-2xl"></i>
             </div>
           </div>
         </div>
