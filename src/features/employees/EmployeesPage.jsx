@@ -7,6 +7,7 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState([])
   const [filteredEmployees, setFilteredEmployees] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const [loading, setLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingEmployee, setEditingEmployee] = useState(null)
@@ -22,14 +23,14 @@ export default function EmployeesPage() {
   // Fetch employees
   useEffect(() => {
     fetchEmployees()
-  }, [])
+  }, [showArchived])
 
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
         .from('employees')
         .select('*')
-        .eq('is_active', true)
+        .eq('is_active', showArchived ? false : true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -152,20 +153,37 @@ export default function EmployeesPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('Bu personeli kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!')) return
+  const handleArchive = async (id) => {
+    if (!confirm('Bu personeli arşivlemek istediğinizden emin misiniz? Personel pasif hale gelecek ancak tüm geçmiş kayıtları korunacak.')) return
 
     try {
       const { error } = await supabase
         .from('employees')
-        .delete()
+        .update({ is_active: false })
         .eq('id', id)
 
       if (error) throw error
-      showToast('Personel başarıyla silindi!')
+      showToast('Personel başarıyla arşivlendi!')
       fetchEmployees()
     } catch (error) {
-      showToast('Silme işlemi başarısız: ' + error.message, 'error')
+      showToast('Arşivleme işlemi başarısız: ' + error.message, 'error')
+    }
+  }
+
+  const handleReactivate = async (id) => {
+    if (!confirm('Bu personeli tekrar aktif hale getirmek istediğinizden emin misiniz?')) return
+
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ is_active: true })
+        .eq('id', id)
+
+      if (error) throw error
+      showToast('Personel başarıyla aktifleştirildi!')
+      fetchEmployees()
+    } catch (error) {
+      showToast('Aktifleştirme işlemi başarısız: ' + error.message, 'error')
     }
   }
 
@@ -195,11 +213,25 @@ export default function EmployeesPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Personel Yönetimi</h1>
-          <p className="text-gray-600 mt-1">Toplam {employees.length} personel</p>
+          <p className="text-gray-600 mt-1">
+            {showArchived ? 'Arşivlenmiş' : 'Aktif'} Personel: {employees.length}
+          </p>
         </div>
-        <Button onClick={() => openModal()}>
-          + Yeni Personel
-        </Button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowArchived(!showArchived)}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              showArchived
+                ? 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {showArchived ? '📋 Aktif Personeli Göster' : '📦 Arşivi Göster'}
+          </button>
+          <Button onClick={() => openModal()}>
+            + Yeni Personel
+          </Button>
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -269,9 +301,16 @@ export default function EmployeesPage() {
                 const dailyWage = (monthlySalary / 30).toFixed(2)
 
                 return (
-                  <tr key={employee.id} className="hover:bg-gray-50">
+                  <tr key={employee.id} className={`hover:bg-gray-50 ${showArchived ? 'bg-gray-50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      {employee.full_name}
+                      <div className="flex items-center gap-2">
+                        {employee.full_name}
+                        {showArchived && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-700">
+                            Arşivlenmiş
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-gray-600">
                       {employee.position || '-'}
@@ -289,9 +328,15 @@ export default function EmployeesPage() {
                       <Button size="sm" variant="outline" onClick={() => openModal(employee)}>
                         Düzenle
                       </Button>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(employee.id)}>
-                        Sil
-                      </Button>
+                      {showArchived ? (
+                        <Button size="sm" variant="primary" onClick={() => handleReactivate(employee.id)}>
+                          Aktifleştir
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="danger" onClick={() => handleArchive(employee.id)}>
+                          Arşivle
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 )
