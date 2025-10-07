@@ -36,6 +36,10 @@ export default function ReportsPage() {
   const [reportYear, setReportYear] = useState(currentYear)
   const [monthlyReport, setMonthlyReport] = useState(null)
 
+  // Yearly report state
+  const [yearlyReportYear, setYearlyReportYear] = useState(currentYear)
+  const [yearlyReport, setYearlyReport] = useState(null)
+
   // Employee report state
   const oneMonthAgo = new Date()
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
@@ -161,6 +165,29 @@ export default function ReportsPage() {
     }
   }
 
+  const generateYearlyReport = async () => {
+    setLoading(true)
+    try {
+      const startDate = `${yearlyReportYear}-01-01`
+      const endDate = `${yearlyReportYear}-12-31`
+
+      const { data, error } = await supabase
+        .from('attendance_records')
+        .select('*,employees(id,full_name,salary)')
+        .gte('work_date', startDate)
+        .lte('work_date', endDate)
+
+      if (error) throw error
+
+      const yearlyData = calculateYearlyReport(data || [])
+      setYearlyReport(yearlyData)
+    } catch (error) {
+      showToast('Yıllık rapor oluşturulurken hata: ' + error.message, 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const generateEmployeeReport = async () => {
     if (!selectedEmployee) {
       showToast('Lütfen personel seçiniz', 'error')
@@ -280,6 +307,48 @@ export default function ReportsPage() {
     })
   }
 
+  const calculateYearlyReport = (records) => {
+    const grouped = groupByEmployee(records)
+    return grouped.map(emp => {
+      let fullDays = 0
+      let halfDays = 0
+      let absentDays = 0
+      let overtimeHours = 0
+
+      emp.records.forEach(record => {
+        if (record.status === 'Tam Gün') {
+          fullDays++
+          overtimeHours += record.overtime_hours || 0
+        }
+        else if (record.status === 'Yarım Gün') {
+          halfDays++
+          overtimeHours += record.overtime_hours || 0
+        }
+        else if (record.status === 'Gelmedi' || record.status === 'Yok' || record.status === 'Raporlu' || record.status === 'İzinli') {
+          absentDays++
+        }
+      })
+
+      const totalDays = fullDays + (halfDays * 0.5)
+      const grossSalary = totalDays * emp.dailyWage
+      const overtimePayment = (overtimeHours * emp.dailyWage) / 9
+      const totalGross = grossSalary + overtimePayment
+
+      return {
+        employee: emp.employee,
+        dailyWage: emp.dailyWage,
+        fullDays,
+        halfDays,
+        absentDays,
+        totalDays,
+        overtimeHours,
+        overtimePayment,
+        grossSalary: totalGross,
+        netSalary: totalGross
+      }
+    })
+  }
+
   const formatDate = (dateStr) => {
     return new Date(dateStr).toLocaleDateString('tr-TR')
   }
@@ -344,6 +413,15 @@ export default function ReportsPage() {
               }`}
           >
             💰 Aylık Bordro
+          </button>
+          <button
+            onClick={() => setActiveTab('yearly')}
+            className={`pb-4 px-1 border-b-2 font-medium text-sm transition ${activeTab === 'yearly'
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+          >
+            📊 Yıllık Rapor
           </button>
           <button
             onClick={() => setActiveTab('employee')}
@@ -833,6 +911,124 @@ export default function ReportsPage() {
               <p className="text-blue-800">
                 💰 Bordro raporu oluşturmak için ay ve yıl seçip "Bordro Oluştur" butonuna tıklayın.
               </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Yearly Report Tab */}
+      {activeTab === 'yearly' && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Yıl Seçin
+                </label>
+                <select
+                  value={yearlyReportYear}
+                  onChange={(e) => setYearlyReportYear(parseInt(e.target.value))}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                >
+                  {Array.from({ length: 10 }, (_, i) => currentYear - i).map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </div>
+              <Button onClick={generateYearlyReport} disabled={loading}>
+                {loading ? 'Oluşturuluyor...' : 'Rapor Oluştur'}
+              </Button>
+            </div>
+          </div>
+
+          {yearlyReport && yearlyReport.length > 0 && (
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Yıllık Rapor - {yearlyReportYear}
+                </h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => showError('Yıllık Excel export hazırlanıyor...')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <span>📊</span> Excel
+                  </button>
+                  <button
+                    onClick={() => showError('Yıllık PDF export hazırlanıyor...')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    <span>📄</span> PDF
+                  </button>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-indigo-600 text-white">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Personel</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Günlük Ücret</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Tam Gün</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Yarım Gün</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Gelmedi</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Toplam Gün</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Ek Mesai</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Ek Mesai Ücreti</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Brüt Maaş</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider">Net Maaş</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {yearlyReport.map((emp, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">{emp.employee}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900 font-medium">
+                          ₺{parseFloat(emp.dailyWage).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-600">{emp.fullDays}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-600">{emp.halfDays}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-600">{emp.absentDays}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-600">{emp.totalDays.toFixed(1)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-600">{emp.overtimeHours || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-gray-900 font-medium">
+                          ₺{(emp.overtimePayment || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-green-600 font-semibold">
+                          ₺{emp.grossSalary.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-indigo-600 font-bold">
+                          ₺{emp.netSalary.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-gray-100 font-bold">
+                      <td className="px-6 py-4 whitespace-nowrap">TOPLAM</td>
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4"></td>
+                      <td className="px-6 py-4 text-right">{yearlyReport.reduce((sum, emp) => sum + (emp.overtimeHours || 0), 0)}</td>
+                      <td className="px-6 py-4 text-right">
+                        ₺{yearlyReport.reduce((sum, emp) => sum + (emp.overtimePayment || 0), 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-right text-green-600">
+                        ₺{yearlyReport.reduce((sum, emp) => sum + emp.grossSalary, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                      <td className="px-6 py-4 text-right text-indigo-600">
+                        ₺{yearlyReport.reduce((sum, emp) => sum + emp.netSalary, 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {yearlyReport === null && (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <p className="text-gray-500">Rapor oluşturmak için yukarıdaki butona tıklayın</p>
             </div>
           )}
         </div>
