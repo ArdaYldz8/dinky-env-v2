@@ -278,6 +278,32 @@ export const exportDailyReportToExcel = (dailyReport, date) => {
   })
 
   const worksheet = XLSX.utils.json_to_sheet(data)
+
+  // Apply Turkish currency format to currency columns (F, G, H)
+  const range = XLSX.utils.decode_range(worksheet['!ref'])
+  for (let R = 1; R <= range.e.r; R++) {
+    // Günlük Ücret (column F)
+    const cellF = worksheet[XLSX.utils.encode_cell({ r: R, c: 5 })]
+    if (cellF && typeof cellF.v === 'number') {
+      cellF.z = '#,##0.00 "₺"'
+      cellF.t = 'n'
+    }
+
+    // Mesai Ücreti (column G)
+    const cellG = worksheet[XLSX.utils.encode_cell({ r: R, c: 6 })]
+    if (cellG && typeof cellG.v === 'number') {
+      cellG.z = '#,##0.00 "₺"'
+      cellG.t = 'n'
+    }
+
+    // Toplam (column H)
+    const cellH = worksheet[XLSX.utils.encode_cell({ r: R, c: 7 })]
+    if (cellH && typeof cellH.v === 'number') {
+      cellH.z = '#,##0.00 "₺"'
+      cellH.t = 'n'
+    }
+  }
+
   applyExcelStyling(worksheet)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Günlük Rapor')
 
@@ -515,6 +541,17 @@ export const exportWeeklyReportToExcel = (weeklyReport) => {
   })
 
   const worksheet = XLSX.utils.json_to_sheet(data)
+
+  // Apply Turkish currency format to Kazanç column (K - column 10)
+  const range = XLSX.utils.decode_range(worksheet['!ref'])
+  for (let R = 1; R <= range.e.r; R++) {
+    const cellK = worksheet[XLSX.utils.encode_cell({ r: R, c: 10 })]
+    if (cellK && typeof cellK.v === 'number') {
+      cellK.z = '#,##0.00 "₺"'
+      cellK.t = 'n'
+    }
+  }
+
   applyExcelStyling(worksheet)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Haftalık Rapor')
 
@@ -697,6 +734,39 @@ export const exportMonthlyReportToExcel = (monthlyReport, month, year) => {
   })
 
   const worksheet = XLSX.utils.json_to_sheet(data)
+
+  // Apply Turkish currency format to currency columns
+  const range = XLSX.utils.decode_range(worksheet['!ref'])
+  for (let R = 1; R <= range.e.r; R++) {
+    // Günlük Ücret (column B)
+    const cellB = worksheet[XLSX.utils.encode_cell({ r: R, c: 1 })]
+    if (cellB && typeof cellB.v === 'number') {
+      cellB.z = '#,##0.00 "₺"'
+      cellB.t = 'n'
+    }
+
+    // Ek Mesai Ücreti (column H)
+    const cellH = worksheet[XLSX.utils.encode_cell({ r: R, c: 7 })]
+    if (cellH && typeof cellH.v === 'number') {
+      cellH.z = '#,##0.00 "₺"'
+      cellH.t = 'n'
+    }
+
+    // Brüt Maaş (column I)
+    const cellI = worksheet[XLSX.utils.encode_cell({ r: R, c: 8 })]
+    if (cellI && typeof cellI.v === 'number') {
+      cellI.z = '#,##0.00 "₺"'
+      cellI.t = 'n'
+    }
+
+    // Net Maaş (column L)
+    const cellL = worksheet[XLSX.utils.encode_cell({ r: R, c: 11 })]
+    if (cellL && typeof cellL.v === 'number') {
+      cellL.z = '#,##0.00 "₺"'
+      cellL.t = 'n'
+    }
+  }
+
   applyExcelStyling(worksheet)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Aylık Bordro')
 
@@ -845,9 +915,19 @@ export const exportEmployeeReportToExcel = (employeeReport, startDate, endDate) 
 
   const summarySheet = XLSX.utils.json_to_sheet(summaryData)
 
-  // Apply custom styling to summary
+  // Apply Turkish currency format to currency values in summary
   const summaryRange = XLSX.utils.decode_range(summarySheet['!ref'])
   summarySheet['!cols'] = [{ wch: 25 }, { wch: 35 }]
+
+  // Format specific rows that contain currency values
+  const currencyRows = [3, 4, 17, 18, 19, 22] // Günlük Ücret, Aylık Maaş, Çalışma Ücreti, Mesai Ücreti, BRÜT KAZANÇ, NET ÖDEME
+  currencyRows.forEach(rowIndex => {
+    const cell = summarySheet[XLSX.utils.encode_cell({ r: rowIndex, c: 1 })]
+    if (cell && typeof cell.v === 'number') {
+      cell.z = '#,##0.00 "₺"'
+      cell.t = 'n'
+    }
+  })
 
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Özet')
 
