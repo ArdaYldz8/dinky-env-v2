@@ -26,13 +26,19 @@ const formatCurrency = (amount) => {
 
 // Format currency for PDF (ASCII compatible - no Turkish Lira symbol)
 const formatCurrencyForPDF = (amount) => {
-  // Format number with thousands separator
-  const formatted = Math.abs(amount).toFixed(2)
-  const parts = formatted.split('.')
-  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  const decimalPart = parts[1]
+  if (amount === null || amount === undefined || isNaN(amount)) return '0,00 TL'
 
-  return `${amount < 0 ? '-' : ''}${integerPart},${decimalPart} TL`
+  const absAmount = Math.abs(amount)
+  const integerPart = Math.floor(absAmount)
+  const decimalPart = Math.round((absAmount - integerPart) * 100)
+
+  // Format integer part with dot as thousands separator
+  const formattedInteger = integerPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  // Format decimal part with leading zero if needed
+  const formattedDecimal = decimalPart.toString().padStart(2, '0')
+
+  return `${amount < 0 ? '-' : ''}${formattedInteger},${formattedDecimal} TL`
 }
 
 // Format date for export
