@@ -3,6 +3,16 @@ import { supabase } from '../../services/supabase'
 import Button from '../../shared/components/Button'
 import { useToast } from '../../shared/hooks'
 import { handleSupabaseError } from '../../utils/errorHandler'
+import {
+  exportDailyReportToExcel,
+  exportDailyReportToPDF,
+  exportWeeklyReportToExcel,
+  exportWeeklyReportToPDF,
+  exportMonthlyReportToExcel,
+  exportMonthlyReportToPDF,
+  exportEmployeeReportToExcel,
+  exportEmployeeReportToPDF
+} from './utils/reportExport'
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('daily')
@@ -236,10 +246,18 @@ export default function ReportsPage() {
       let overtimeHours = 0
 
       emp.records.forEach(record => {
-        if (record.status === 'Tam Gün') fullDays++
-        else if (record.status === 'Yarım Gün') halfDays++
-        else if (record.status === 'Gelmedi') absentDays++
-        overtimeHours += record.overtime_hours || 0
+        if (record.status === 'Tam Gün') {
+          fullDays++
+          overtimeHours += record.overtime_hours || 0
+        }
+        else if (record.status === 'Yarım Gün') {
+          halfDays++
+          overtimeHours += record.overtime_hours || 0
+        }
+        else if (record.status === 'Gelmedi' || record.status === 'Yok' || record.status === 'Raporlu' || record.status === 'İzinli') {
+          absentDays++
+          // No pay for absent/sick/on-leave days
+        }
       })
 
       const totalDays = fullDays + (halfDays * 0.5)
@@ -364,9 +382,9 @@ export default function ReportsPage() {
           {dailyReport && dailyReport.length > 0 && (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow p-6">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Tam Gün Çalışan</h4>
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Tam Gün</h4>
                   <span className="text-3xl font-bold text-green-600">
                     {dailyReport.filter(r => r.status === 'Tam Gün').length}
                   </span>
@@ -378,24 +396,44 @@ export default function ReportsPage() {
                   </span>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Gelmedi</h4>
-                  <span className="text-3xl font-bold text-red-600">
-                    {dailyReport.filter(r => r.status === 'Gelmedi').length}
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">İzinli</h4>
+                  <span className="text-3xl font-bold text-blue-600">
+                    {dailyReport.filter(r => r.status === 'İzinli').length}
                   </span>
                 </div>
                 <div className="bg-white rounded-lg shadow p-6">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Toplam Mesai</h4>
-                  <span className="text-3xl font-bold text-indigo-600">
-                    {dailyReport.reduce((sum, r) => sum + parseFloat(r.overtime_hours || 0), 0)} Saat
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Raporlu</h4>
+                  <span className="text-3xl font-bold text-orange-600">
+                    {dailyReport.filter(r => r.status === 'Raporlu').length}
+                  </span>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6">
+                  <h4 className="text-sm font-medium text-gray-500 mb-2">Gelmedi</h4>
+                  <span className="text-3xl font-bold text-red-600">
+                    {dailyReport.filter(r => r.status === 'Yok' || r.status === 'Gelmedi').length}
                   </span>
                 </div>
               </div>
 
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">
                     Günlük Puantaj Raporu - {formatDate(dailyDate)}
                   </h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => exportDailyReportToExcel(dailyReport, dailyDate)}
+                    >
+                      📊 Excel
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => exportDailyReportToPDF(dailyReport, dailyDate)}
+                    >
+                      📄 PDF
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -416,9 +454,12 @@ export default function ReportsPage() {
                       const monthlySalary = parseFloat(record.employees?.salary || 0)
                       const dailyWage = monthlySalary / 30
                       const overtimeHours = parseFloat(record.overtime_hours || 0)
-                      const overtimePayment = (overtimeHours * dailyWage) / 9
-                      const dayMultiplier = record.status === 'Tam Gün' ? 1 : record.status === 'Yarım Gün' ? 0.5 : 0
+                      // Calculate day multiplier: only Tam Gün (1) and Yarım Gün (0.5) get paid
+                      // İzinli, Raporlu, Yok/Gelmedi get 0
+                      const dayMultiplier = record.status === 'Tam Gün' ? 1 :
+                                          record.status === 'Yarım Gün' ? 0.5 : 0
                       const dayPayment = dailyWage * dayMultiplier
+                      const overtimePayment = dayMultiplier > 0 ? (overtimeHours * dailyWage) / 9 : 0
                       const totalPayment = dayPayment + overtimePayment
 
                       return (
@@ -444,7 +485,7 @@ export default function ReportsPage() {
                             {overtimeHours}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                            {formatCurrency(dailyWage)}
+                            {formatCurrency(dayPayment)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                             {formatCurrency(overtimePayment)}
@@ -528,10 +569,24 @@ export default function ReportsPage() {
 
           {weeklyReport && weeklyReport.data.length > 0 && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Haftalık Rapor - {formatDate(weeklyReport.startDate)} / {formatDate(weeklyReport.endDate)}
                 </h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportWeeklyReportToExcel(weeklyReport)}
+                  >
+                    📊 Excel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportWeeklyReportToPDF(weeklyReport)}
+                  >
+                    📄 PDF
+                  </Button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -562,11 +617,15 @@ export default function ReportsPage() {
 
                       const totalDays = emp.records.filter(r => r.status === 'Tam Gün').length +
                         emp.records.filter(r => r.status === 'Yarım Gün').length * 0.5
-                      const totalOvertime = emp.records.reduce((sum, r) => sum + (r.overtime_hours || 0), 0)
+                      const totalOvertime = emp.records.reduce((sum, r) => {
+                        // Only count overtime for work days (not absent/sick)
+                        const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+                        return sum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+                      }, 0)
                       const totalEarnings = emp.records.reduce((sum, r) => {
                         const dailyWage = emp.dailyWage
                         const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
-                        const overtimePayment = (r.overtime_hours || 0) * (dailyWage / 9)
+                        const overtimePayment = dayMultiplier > 0 ? (r.overtime_hours || 0) * (dailyWage / 9) : 0
                         return sum + (dailyWage * dayMultiplier) + overtimePayment
                       }, 0)
 
@@ -662,10 +721,24 @@ export default function ReportsPage() {
 
           {monthlyReport && monthlyReport.length > 0 && (
             <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Aylık Bordro Raporu - {getMonthName(reportMonth)} {reportYear}
                 </h3>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportMonthlyReportToExcel(monthlyReport, reportMonth, reportYear)}
+                  >
+                    📊 Excel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportMonthlyReportToPDF(monthlyReport, reportMonth, reportYear)}
+                  >
+                    📄 PDF
+                  </Button>
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -849,6 +922,8 @@ export default function ReportsPage() {
                       <tr>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Tam Gün</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Yarım Gün</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İzinli</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Raporlu</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Gelmedi</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Toplam Çalışılan</th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Mesai (Saat)</th>
@@ -863,13 +938,22 @@ export default function ReportsPage() {
                           {employeeReport.filter(r => r.status === 'Yarım Gün').length}
                         </td>
                         <td className="px-6 py-4 text-center text-lg font-semibold text-gray-900">
-                          {employeeReport.filter(r => r.status === 'Gelmedi').length}
+                          {employeeReport.filter(r => r.status === 'İzinli').length}
+                        </td>
+                        <td className="px-6 py-4 text-center text-lg font-semibold text-gray-900">
+                          {employeeReport.filter(r => r.status === 'Raporlu').length}
+                        </td>
+                        <td className="px-6 py-4 text-center text-lg font-semibold text-gray-900">
+                          {employeeReport.filter(r => r.status === 'Yok' || r.status === 'Gelmedi').length}
                         </td>
                         <td className="px-6 py-4 text-center text-lg font-bold text-gray-900">
                           {(employeeReport.filter(r => r.status === 'Tam Gün').length + employeeReport.filter(r => r.status === 'Yarım Gün').length * 0.5).toFixed(1)}
                         </td>
                         <td className="px-6 py-4 text-center text-lg font-semibold text-gray-900">
-                          {employeeReport.reduce((sum, r) => sum + (r.overtime_hours || 0), 0)}
+                          {employeeReport.reduce((sum, r) => {
+                            const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+                            return sum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+                          }, 0)}
                         </td>
                       </tr>
                     </tbody>
@@ -886,7 +970,10 @@ export default function ReportsPage() {
                       {(() => {
                         const dailyWage = (employeeReport[0]?.employees?.salary || 0) / 30
                         const totalDays = employeeReport.filter(r => r.status === 'Tam Gün').length + employeeReport.filter(r => r.status === 'Yarım Gün').length * 0.5
-                        const totalOvertime = employeeReport.reduce((sum, r) => sum + (r.overtime_hours || 0), 0)
+                        const totalOvertime = employeeReport.reduce((sum, r) => {
+                          const dayMultiplier = r.status === 'Tam Gün' ? 1 : r.status === 'Yarım Gün' ? 0.5 : 0
+                          return sum + (dayMultiplier > 0 ? (r.overtime_hours || 0) : 0)
+                        }, 0)
                         const workEarnings = totalDays * dailyWage
                         const overtimeEarnings = totalOvertime * (dailyWage / 9)
                         const grossEarnings = workEarnings + overtimeEarnings
@@ -931,8 +1018,22 @@ export default function ReportsPage() {
 
               {/* Puantaj Detayları */}
               <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">PUANTAJ DETAYLARI</h3>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => exportEmployeeReportToExcel(employeeReport, employeeStartDate, employeeEndDate)}
+                    >
+                      📊 Excel
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => exportEmployeeReportToPDF(employeeReport, employeeStartDate, employeeEndDate)}
+                    >
+                      📄 PDF
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
