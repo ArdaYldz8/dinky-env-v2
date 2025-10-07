@@ -997,3 +997,128 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
   addPDFFooter(doc)
   doc.save(`Personel_Rapor_${employeeName.replace(/\s/g, '_')}_${startDate}_${endDate}.pdf`)
 }
+
+// ========================================
+// YEARLY REPORT EXPORTS
+// ========================================
+
+export const exportYearlyReportToExcel = (yearlyReport, year) => {
+  const workbook = XLSX.utils.book_new()
+
+  const data = yearlyReport.map(emp => ({
+    'Personel': emp.employee,
+    'Günlük Ücret': formatCurrencyForExcel(emp.dailyWage),
+    'Tam Gün': emp.fullDays,
+    'Yarım Gün': emp.halfDays,
+    'Gelmedi': emp.absentDays,
+    'Toplam Gün': emp.totalDays,
+    'Ek Mesai': emp.overtimeHours || 0,
+    'Ek Mesai Ücreti': formatCurrencyForExcel(emp.overtimePayment || 0),
+    'Brüt Maaş': formatCurrencyForExcel(emp.grossSalary),
+    'Avanslar': formatCurrencyForExcel(0),
+    'Kesintiler': formatCurrencyForExcel(0),
+    'Net Maaş': formatCurrencyForExcel(emp.netSalary)
+  }))
+
+  data.push({
+    'Personel': 'TOPLAM',
+    'Günlük Ücret': '',
+    'Tam Gün': '',
+    'Yarım Gün': '',
+    'Gelmedi': '',
+    'Toplam Gün': '',
+    'Ek Mesai': yearlyReport.reduce((sum, emp) => sum + (emp.overtimeHours || 0), 0),
+    'Ek Mesai Ücreti': formatCurrencyForExcel(yearlyReport.reduce((sum, emp) => sum + (emp.overtimePayment || 0), 0)),
+    'Brüt Maaş': formatCurrencyForExcel(yearlyReport.reduce((sum, emp) => sum + emp.grossSalary, 0)),
+    'Avanslar': formatCurrencyForExcel(0),
+    'Kesintiler': formatCurrencyForExcel(0),
+    'Net Maaş': formatCurrencyForExcel(yearlyReport.reduce((sum, emp) => sum + emp.netSalary, 0))
+  })
+
+  const worksheet = XLSX.utils.json_to_sheet(data)
+  applyExcelStyling(worksheet)
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Yıllık Bordro')
+
+  const fileName = `Yillik_Bordro_${year}.xlsx`
+  XLSX.writeFile(workbook, fileName)
+}
+
+export const exportYearlyReportToPDF = (yearlyReport, year) => {
+  const doc = new jsPDF('landscape')
+
+  const startY = addPDFHeader(doc, 'Yillik Bordro Raporu', `${year}`)
+
+  const tableData = yearlyReport.map(emp => [
+    turkishToAscii(emp.employee),
+    formatCurrencyForPDF(emp.dailyWage),
+    emp.fullDays,
+    emp.halfDays,
+    emp.absentDays,
+    emp.totalDays.toFixed(1),
+    emp.overtimeHours || 0,
+    formatCurrencyForPDF(emp.overtimePayment || 0),
+    formatCurrencyForPDF(emp.grossSalary),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(emp.netSalary)
+  ])
+
+  tableData.push([
+    'TOPLAM',
+    '',
+    '',
+    '',
+    '',
+    '',
+    yearlyReport.reduce((sum, emp) => sum + (emp.overtimeHours || 0), 0),
+    formatCurrencyForPDF(yearlyReport.reduce((sum, emp) => sum + (emp.overtimePayment || 0), 0)),
+    formatCurrencyForPDF(yearlyReport.reduce((sum, emp) => sum + emp.grossSalary, 0)),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(yearlyReport.reduce((sum, emp) => sum + emp.netSalary, 0))
+  ])
+
+  autoTable(doc, {
+    startY: startY + 5,
+    head: [['Personel', 'Gunluk', 'Tam', 'Yarim', 'Yok', 'Top.', 'Mesai', 'M.Ucret', 'Brut', 'Avans', 'Kesinti', 'Net']],
+    body: tableData,
+    theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: 2,
+      lineColor: hexToRgb(COLORS.border),
+      lineWidth: 0.1
+    },
+    headStyles: {
+      fillColor: hexToRgb(COLORS.primary),
+      textColor: 255,
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    alternateRowStyles: {
+      fillColor: hexToRgb(COLORS.light)
+    },
+    footStyles: {
+      fillColor: hexToRgb(COLORS.border),
+      textColor: hexToRgb(COLORS.dark),
+      fontStyle: 'bold'
+    },
+    columnStyles: {
+      0: { cellWidth: 40 },
+      1: { cellWidth: 22, halign: 'right' },
+      2: { cellWidth: 15, halign: 'center' },
+      3: { cellWidth: 15, halign: 'center' },
+      4: { cellWidth: 15, halign: 'center' },
+      5: { cellWidth: 15, halign: 'center', fontStyle: 'bold' },
+      6: { cellWidth: 15, halign: 'center' },
+      7: { cellWidth: 22, halign: 'right' },
+      8: { cellWidth: 25, halign: 'right', fontStyle: 'bold' },
+      9: { cellWidth: 22, halign: 'right' },
+      10: { cellWidth: 22, halign: 'right' },
+      11: { cellWidth: 25, halign: 'right', fontStyle: 'bold', fillColor: hexToRgb(COLORS.success), textColor: 255 }
+    }
+  })
+
+  addPDFFooter(doc)
+  doc.save(`Yillik_Bordro_${year}.pdf`)
+}

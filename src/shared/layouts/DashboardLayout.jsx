@@ -37,13 +37,13 @@ export default function DashboardLayout() {
         name: 'Projeler',
         icon: '📊',
         isDropdown: true,
-        roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'],
+        roles: ['patron', 'genel_mudur', 'muhasebeci', 'usta', 'admin'],
         children: [
           { name: 'Proje Listesi', path: '/projects', icon: '📁', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
           { name: 'Müşteriler', path: '/customers', icon: '🏢', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
+          { name: 'Kalite Kontrol', path: '/quality-control', icon: '✅', roles: ['patron', 'genel_mudur', 'usta', 'admin'] },
         ]
       },
-      { name: 'Kalite Kontrol', path: '/quality-control', icon: '✅', roles: ['patron', 'genel_mudur', 'usta', 'admin'] },
       { name: 'Stok', path: '/stock', icon: '📦', roles: ['patron', 'genel_mudur', 'depocu', 'admin'] },
       { name: 'Raporlar', path: '/reports', icon: '📈', roles: ['patron', 'genel_mudur', 'muhasebeci', 'admin'] },
       { name: 'Ayarlar', path: '/settings', icon: '⚙️', roles: ['patron', 'genel_mudur', 'admin'] },

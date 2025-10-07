@@ -11,7 +11,9 @@ import {
   exportMonthlyReportToExcel,
   exportMonthlyReportToPDF,
   exportEmployeeReportToExcel,
-  exportEmployeeReportToPDF
+  exportEmployeeReportToPDF,
+  exportYearlyReportToExcel,
+  exportYearlyReportToPDF
 } from './utils/reportExport'
 
 export default function ReportsPage() {
@@ -948,18 +950,18 @@ export default function ReportsPage() {
                   Yıllık Rapor - {yearlyReportYear}
                 </h2>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => showError('Yıllık Excel export hazırlanıyor...')}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportYearlyReportToExcel(yearlyReport, yearlyReportYear)}
                   >
-                    <span>📊</span> Excel
-                  </button>
-                  <button
-                    onClick={() => showError('Yıllık PDF export hazırlanıyor...')}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                    📊 Excel
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => exportYearlyReportToPDF(yearlyReport, yearlyReportYear)}
                   >
-                    <span>📄</span> PDF
-                  </button>
+                    📄 PDF
+                  </Button>
                 </div>
               </div>
 
