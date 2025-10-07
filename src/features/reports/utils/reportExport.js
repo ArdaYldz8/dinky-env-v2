@@ -24,6 +24,17 @@ const formatCurrency = (amount) => {
   }).format(amount)
 }
 
+// Format currency for PDF (ASCII compatible - no Turkish Lira symbol)
+const formatCurrencyForPDF = (amount) => {
+  // Format number with thousands separator
+  const formatted = Math.abs(amount).toFixed(2)
+  const parts = formatted.split('.')
+  const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  const decimalPart = parts[1]
+
+  return `${amount < 0 ? '-' : ''}${integerPart},${decimalPart} TL`
+}
+
 // Format date for export
 const formatDate = (dateStr) => {
   return new Date(dateStr).toLocaleDateString('tr-TR')
@@ -325,9 +336,9 @@ export const exportDailyReportToPDF = (dailyReport, date) => {
       turkishToAscii(record.location_name || '-'),
       turkishToAscii(record.status),
       overtimeHours,
-      formatCurrency(dayPayment),
-      formatCurrency(overtimePayment),
-      formatCurrency(totalPayment)
+      formatCurrencyForPDF(dayPayment),
+      formatCurrencyForPDF(overtimePayment),
+      formatCurrencyForPDF(totalPayment)
     ]
   })
 
@@ -355,8 +366,8 @@ export const exportDailyReportToPDF = (dailyReport, date) => {
     '',
     '',
     '',
-    formatCurrency(totalDayPayment),
-    formatCurrency(totalOvertimePayment),
+    formatCurrencyForPDF(totalDayPayment),
+    formatCurrencyForPDF(totalOvertimePayment),
     formatCurrency(totalDayPayment + totalOvertimePayment)
   ])
 
@@ -509,7 +520,7 @@ export const exportWeeklyReportToPDF = (weeklyReport) => {
       getSymbol(dayRecords[0]),
       totalDays.toFixed(1),
       totalOvertime,
-      formatCurrency(totalEarnings)
+      formatCurrencyForPDF(totalEarnings)
     ]
   })
 
@@ -611,17 +622,17 @@ export const exportMonthlyReportToPDF = (monthlyReport, month, year) => {
 
   const tableData = monthlyReport.map(emp => [
     turkishToAscii(emp.employee),
-    formatCurrency(emp.dailyWage),
+    formatCurrencyForPDF(emp.dailyWage),
     emp.fullDays,
     emp.halfDays,
     emp.absentDays,
     emp.totalDays.toFixed(1),
     emp.overtimeHours || 0,
-    formatCurrency(emp.overtimePayment || 0),
-    formatCurrency(emp.grossSalary),
-    formatCurrency(0),
-    formatCurrency(0),
-    formatCurrency(emp.netSalary)
+    formatCurrencyForPDF(emp.overtimePayment || 0),
+    formatCurrencyForPDF(emp.grossSalary),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(emp.netSalary)
   ])
 
   tableData.push([
@@ -632,11 +643,11 @@ export const exportMonthlyReportToPDF = (monthlyReport, month, year) => {
     '',
     '',
     monthlyReport.reduce((sum, emp) => sum + (emp.overtimeHours || 0), 0),
-    formatCurrency(monthlyReport.reduce((sum, emp) => sum + (emp.overtimePayment || 0), 0)),
-    formatCurrency(monthlyReport.reduce((sum, emp) => sum + emp.grossSalary, 0)),
-    formatCurrency(0),
-    formatCurrency(0),
-    formatCurrency(monthlyReport.reduce((sum, emp) => sum + emp.netSalary, 0))
+    formatCurrencyForPDF(monthlyReport.reduce((sum, emp) => sum + (emp.overtimePayment || 0), 0)),
+    formatCurrencyForPDF(monthlyReport.reduce((sum, emp) => sum + emp.grossSalary, 0)),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(0),
+    formatCurrencyForPDF(monthlyReport.reduce((sum, emp) => sum + emp.netSalary, 0))
   ])
 
   autoTable(doc, {
@@ -808,8 +819,8 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
   doc.text(turkishToAscii(employeeName), 17, infoY + 11)
   doc.text(turkishToAscii(position), 17, infoY + 16)
   doc.setFontSize(7)
-  doc.text(`Gunluk: ${formatCurrency(dailyWage)}`, 17, infoY + 22)
-  doc.text(`Aylik: ${formatCurrency(salary)}`, 17, infoY + 27)
+  doc.text(`Gunluk: ${formatCurrencyForPDF(dailyWage)}`, 17, infoY + 22)
+  doc.text(`Aylik: ${formatCurrencyForPDF(salary)}`, 17, infoY + 27)
 
   // Column 2: Attendance Stats
   doc.setFillColor(...hexToRgb(COLORS.light))
@@ -834,12 +845,12 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
   doc.text('MALI OZET', 137, infoY + 5)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  doc.text(`Calisma: ${formatCurrency(workEarnings)}`, 137, infoY + 11)
-  doc.text(`Mesai: ${formatCurrency(overtimeEarnings)}`, 137, infoY + 16)
+  doc.text(`Calisma: ${formatCurrencyForPDF(workEarnings)}`, 137, infoY + 11)
+  doc.text(`Mesai: ${formatCurrencyForPDF(overtimeEarnings)}`, 137, infoY + 16)
   doc.text(`(${totalOvertime} saat)`, 137, infoY + 21)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(10)
-  doc.text(`${formatCurrency(grossEarnings)}`, 137, infoY + 29)
+  doc.text(`${formatCurrencyForPDF(grossEarnings)}`, 137, infoY + 29)
 
   // Detail table
   doc.setTextColor(...hexToRgb(COLORS.dark))
