@@ -441,7 +441,9 @@ export const exportWeeklyReportToExcel = (weeklyReport) => {
 
     const dayRecords = {}
     emp.records.forEach(record => {
-      const date = new Date(record.work_date + 'T12:00:00')
+      // Parse date more reliably to avoid timezone issues
+      const [year, month, day] = record.work_date.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
       const dayNum = date.getDay()
       dayRecords[dayNum] = record.status
     })
@@ -540,7 +542,9 @@ export const exportWeeklyReportToPDF = (weeklyReport) => {
 
     const dayRecords = {}
     emp.records.forEach(record => {
-      const date = new Date(record.work_date + 'T12:00:00')
+      // Parse date more reliably to avoid timezone issues
+      const [year, month, day] = record.work_date.split('-').map(Number)
+      const date = new Date(year, month - 1, day)
       const dayNum = date.getDay()
       dayRecords[dayNum] = record.status
     })
