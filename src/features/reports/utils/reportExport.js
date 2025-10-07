@@ -39,6 +39,22 @@ const hexToRgb = (hex) => {
   ] : [0, 0, 0]
 }
 
+// Turkish character mapper for PDF compatibility
+const turkishToAscii = (text) => {
+  if (typeof text !== 'string') return text
+
+  const charMap = {
+    'ç': 'c', 'Ç': 'C',
+    'ğ': 'g', 'Ğ': 'G',
+    'ı': 'i', 'İ': 'I',
+    'ö': 'o', 'Ö': 'O',
+    'ş': 's', 'Ş': 'S',
+    'ü': 'u', 'Ü': 'U'
+  }
+
+  return text.replace(/[çÇğĞıİöÖşŞüÜ]/g, match => charMap[match] || match)
+}
+
 // Add professional header to PDF
 const addPDFHeader = (doc, title, subtitle = '') => {
   const pageWidth = doc.internal.pageSize.width
@@ -304,10 +320,10 @@ export const exportDailyReportToPDF = (dailyReport, date) => {
     const totalPayment = dayPayment + overtimePayment
 
     return [
-      record.employees?.full_name || '-',
-      record.employees?.position || '-',
-      record.location_name || '-',
-      record.status,
+      turkishToAscii(record.employees?.full_name || '-'),
+      turkishToAscii(record.employees?.position || '-'),
+      turkishToAscii(record.location_name || '-'),
+      turkishToAscii(record.status),
       overtimeHours,
       formatCurrency(dayPayment),
       formatCurrency(overtimePayment),
@@ -483,7 +499,7 @@ export const exportWeeklyReportToPDF = (weeklyReport) => {
     }
 
     return [
-      emp.employee,
+      turkishToAscii(emp.employee),
       getSymbol(dayRecords[1]),
       getSymbol(dayRecords[2]),
       getSymbol(dayRecords[3]),
@@ -594,7 +610,7 @@ export const exportMonthlyReportToPDF = (monthlyReport, month, year) => {
   const startY = addPDFHeader(doc, 'Aylik Bordro Raporu', `${monthNames[month - 1]} ${year}`)
 
   const tableData = monthlyReport.map(emp => [
-    emp.employee,
+    turkishToAscii(emp.employee),
     formatCurrency(emp.dailyWage),
     emp.fullDays,
     emp.halfDays,
@@ -741,8 +757,8 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(9)
-  doc.text(`Ad Soyad: ${employeeName}`, 20, startY + 18)
-  doc.text(`Birim: ${position}`, 20, startY + 23)
+  doc.text(`Ad Soyad: ${turkishToAscii(employeeName)}`, 20, startY + 18)
+  doc.text(`Birim: ${turkishToAscii(position)}`, 20, startY + 23)
   doc.text(`Gunluk Ucret: ${formatCurrency(dailyWage)}`, 110, startY + 18)
   doc.text(`Aylik Maas: ${formatCurrency(salary)}`, 110, startY + 23)
 
@@ -802,8 +818,8 @@ export const exportEmployeeReportToPDF = (employeeReport, startDate, endDate) =>
     return [
       formatDate(record.work_date),
       dayNames[date.getDay()],
-      record.status,
-      record.location_name || '-',
+      turkishToAscii(record.status),
+      turkishToAscii(record.location_name || '-'),
       record.overtime_hours || '-'
     ]
   })
