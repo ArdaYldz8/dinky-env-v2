@@ -14,14 +14,21 @@ const COLORS = {
   border: '#E5E7EB'        // Gray 200
 }
 
-// Format currency for export
+// Format currency for Excel export (professional Turkish format)
 const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('tr-TR', {
-    style: 'currency',
-    currency: 'TRY',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount)
+  if (amount === null || amount === undefined || isNaN(amount)) return '0,00 ₺'
+
+  const absAmount = Math.abs(amount)
+  const integerPart = Math.floor(absAmount)
+  const decimalPart = Math.round((absAmount - integerPart) * 100)
+
+  // Format integer part with dot as thousands separator
+  const formattedInteger = integerPart.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  // Format decimal part with leading zero if needed
+  const formattedDecimal = decimalPart.toString().padStart(2, '0')
+
+  return `${amount < 0 ? '-' : ''}${formattedInteger},${formattedDecimal} ₺`
 }
 
 // Format currency for PDF (ASCII compatible - no Turkish Lira symbol)
