@@ -551,9 +551,12 @@ export const exportWeeklyReportToPDF = (weeklyReport) => {
 
     const getSymbol = (status) => {
       if (!status) return '-'
-      if (status === 'Tam Gün') return '✓'
-      if (status === 'Yarım Gün') return '½'
-      return '✗'
+      if (status === 'Tam Gun' || status === 'Tam Gün') return 'T'
+      if (status === 'Yarim Gun' || status === 'Yarım Gün') return 'Y'
+      if (status === 'Gelmedi' || status === 'Yok') return 'X'
+      if (status === 'Raporlu') return 'R'
+      if (status === 'Izinli' || status === 'İzinli') return 'I'
+      return 'X'
     }
 
     return [
