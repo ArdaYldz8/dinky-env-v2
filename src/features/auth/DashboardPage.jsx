@@ -23,7 +23,6 @@ export default function DashboardPage() {
     projectProgress: []
   })
   const [todayTasks, setTodayTasks] = useState([])
-  const [stockMovements, setStockMovements] = useState([])
   const [deadlineWarnings, setDeadlineWarnings] = useState([])
   const [notifications, setNotifications] = useState([])
   const [showNotifications, setShowNotifications] = useState(true)
@@ -53,7 +52,6 @@ export default function DashboardPage() {
         { data: qualityIssues },
         { data: tasks },
         { data: projectPhases },
-        { data: stockMovementsData },
         { data: upcomingDeadlines },
         { data: employees }
       ] = await Promise.all([
@@ -67,7 +65,6 @@ export default function DashboardPage() {
         supabase.from('quality_issues').select('*'),
         supabase.from('project_tasks').select('*, project_phases(project_id, projects(project_name))').eq('status', 'Devam Ediyor'),
         supabase.from('project_phases').select('*, projects(project_name)').in('status', ['Başlatıldı', 'Devam Ediyor', 'Planlanıyor']),
-        supabase.from('stock_movements').select('*, stock_items(item_name)').order('movement_date', { ascending: false }).limit(5),
         supabase.from('projects').select('*')
           .eq('project_type', 'customer_project')
           .eq('status', 'Aktif')
@@ -146,9 +143,6 @@ export default function DashboardPage() {
       })
 
       setTodayTasks(tasks?.slice(0, 8) || [])
-
-      // Process stock movements
-      setStockMovements(stockMovementsData || [])
 
       // Process deadline warnings
       const warnings = upcomingDeadlines?.map(project => {
@@ -417,43 +411,6 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Left Column - Charts (3/4) */}
         <div className="lg:col-span-3 space-y-6">
-          {/* Stock Movements Widget */}
-          {stockMovements.length > 0 && (
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <i className="fas fa-boxes text-green-600"></i>
-                Son Stok Hareketleri
-              </h3>
-              <div className="space-y-2">
-                {stockMovements.map((movement) => (
-                  <div key={movement.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      movement.movement_type === 'Giriş' ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      <i className={`fas ${movement.movement_type === 'Giriş' ? 'fa-arrow-down' : 'fa-arrow-up'} ${
-                        movement.movement_type === 'Giriş' ? 'text-green-600' : 'text-red-600'
-                      }`}></i>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{movement.stock_items?.item_name || 'Ürün'}</p>
-                      <p className="text-xs text-gray-500">
-                        {movement.movement_type} • {movement.quantity} adet
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">
-                        {new Date(movement.movement_date).toLocaleDateString('tr-TR')}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(movement.movement_date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Attendance Trend Chart */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
