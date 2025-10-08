@@ -176,7 +176,32 @@ export default function ProjectsPage() {
         if (error) throw error
         showSuccess('Proje başarıyla güncellendi!')
       } else {
-        const { error } = await supabase.from('projects').insert([cleanedData])
+        // Insert into projects table
+        const { data: projectData, error } = await supabase
+          .from('projects')
+          .insert([cleanedData])
+          .select()
+          .single()
+
+        if (error) throw error
+
+        // Also insert into work_locations if project_type is customer_project
+        if (formData.project_type === 'customer_project') {
+          const { error: workLocationError } = await supabase
+            .from('work_locations')
+            .insert([{
+              name: formData.project_name.trim(),
+              project_name: formData.project_name.trim(),
+              location_type: 'project',
+              project_id: projectData.id,
+              is_active: formData.status === 'Aktif',
+            }])
+
+          if (workLocationError) {
+            console.error('Work location insert failed:', workLocationError)
+            // Don't throw error here, project is already created
+          }
+        }
 
         if (error) throw error
         showSuccess('Proje başarıyla eklendi!')

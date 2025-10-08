@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import useAuthStore from '../../stores/authStore'
 import { useUserRole } from '../../hooks/useUserRole'
@@ -9,6 +9,17 @@ export default function DashboardLayout() {
   const { userRole, loading: roleLoading } = useUserRole()
   const location = useLocation()
   const [openDropdown, setOpenDropdown] = useState(null)
+
+  // Auto-open dropdown if current path matches
+  useEffect(() => {
+    const currentNav = getAllNavigation(userRole)
+    const activeDropdown = currentNav.find(item =>
+      item.isDropdown && item.children?.some(child => child.path === location.pathname)
+    )
+    if (activeDropdown) {
+      setOpenDropdown(activeDropdown.name)
+    }
+  }, [location.pathname, userRole])
 
   if (!user) {
     return <Navigate to="/login" replace />

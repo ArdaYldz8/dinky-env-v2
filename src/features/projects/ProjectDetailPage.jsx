@@ -41,11 +41,15 @@ export default function ProjectDetailPage() {
   const [selectedPhase, setSelectedPhase] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
   const [viewMode, setViewMode] = useState('list') // 'list' veya 'timeline'
-  const [activeTab, setActiveTab] = useState('project') // 'project', 'quality', 'attendance'
+  const [activeTab, setActiveTab] = useState('project') // 'project', 'quality', 'attendance', 'materials'
 
   // Attendance data
   const [attendanceRecords, setAttendanceRecords] = useState([])
   const [attendanceLoading, setAttendanceLoading] = useState(false)
+
+  // Materials data
+  const [materialMovements, setMaterialMovements] = useState([])
+  const [materialsLoading, setMaterialsLoading] = useState(false)
   const [attendanceFilters, setAttendanceFilters] = useState({
     startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     endDate: new Date().toISOString().split('T')[0],
@@ -58,8 +62,37 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     if (activeTab === 'attendance') {
       loadAttendanceRecords()
+    } else if (activeTab === 'materials') {
+      loadMaterialMovements()
     }
   }, [activeTab, attendanceFilters])
+
+  async function loadMaterialMovements() {
+    setMaterialsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('stock_movements')
+        .select(`
+          id,
+          movement_type,
+          quantity,
+          notes,
+          movement_date,
+          created_at,
+          stock_items(item_name, item_code, unit, category)
+        `)
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setMaterialMovements(data || [])
+    } catch (error) {
+      console.error('Malzeme hareketleri yüklenirken hata:', error)
+      showError('Malzeme hareketleri yüklenemedi')
+    } finally {
+      setMaterialsLoading(false)
+    }
+  }
 
   async function loadAttendanceRecords() {
     setAttendanceLoading(true)
@@ -528,6 +561,16 @@ export default function ProjectDetailPage() {
             >
               Personel Çalışma Saatleri
             </button>
+            <button
+              onClick={() => setActiveTab('materials')}
+              className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
+                activeTab === 'materials'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              📦 Kullanılan Malzemeler
+            </button>
           </div>
         </div>
       </div>
@@ -977,6 +1020,144 @@ export default function ProjectDetailPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={record.notes}>
                             {record.notes || '-'}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Materials Tab */}
+      {activeTab === 'materials' && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          {materialMovements.length > 0 && (() => {
+            const totalItems = new Set(materialMovements.map(m => m.stock_items?.item_name)).size
+            const totalQuantity = materialMovements
+              .filter(m => m.movement_type === 'Çıkış')
+              .reduce((sum, m) => sum + parseFloat(m.quantity || 0), 0)
+            const categoriesUsed = new Set(
+              materialMovements
+                .map(m => m.stock_items?.category)
+                .filter(c => c)
+            ).size
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Toplam Malzeme Çeşidi</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{totalItems}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Package className="text-blue-600" size={24} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Toplam Hareket Sayısı</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{materialMovements.length}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="text-green-600" size={24} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-600">Kullanılan Kategori</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-1">{categoriesUsed}</p>
+                    </div>
+                    <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <span className="text-2xl">📂</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Materials Table */}
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Malzeme Hareketleri</h3>
+            </div>
+            {materialsLoading ? (
+              <div className="p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Yükleniyor...</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Malzeme</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kod</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Kategori</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">İşlem</th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Miktar</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Not</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {materialMovements.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                          Bu projede henüz malzeme hareketi bulunmamaktadır.
+                        </td>
+                      </tr>
+                    ) : (
+                      materialMovements.map((movement) => (
+                        <tr key={movement.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(movement.created_at).toLocaleDateString('tr-TR')}
+                          </td>
+                          <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                            {movement.stock_items?.item_name || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
+                            {movement.stock_items?.item_code || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {movement.stock_items?.category ? (
+                              <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs font-medium">
+                                {movement.stock_items.category}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              movement.movement_type === 'Giriş'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {movement.movement_type}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-semibold text-gray-900">
+                            {parseFloat(movement.quantity).toLocaleString('tr-TR', {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 2
+                            })}{' '}
+                            {movement.stock_items?.unit || ''}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate" title={movement.notes}>
+                            {movement.notes || '-'}
                           </td>
                         </tr>
                       ))

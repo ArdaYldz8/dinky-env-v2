@@ -8,7 +8,7 @@ import { useUserRole } from '../../hooks/useUserRole'
 import { CAN_VIEW_ACTIVITY_LOGS, canPerformAction } from '../../lib/roles'
 
 export default function SettingsPage() {
-  const { role } = useUserRole()
+  const { userRole: role } = useUserRole()
   const [activeTab, setActiveTab] = useState('projects')
   const [projects, setProjects] = useState([])
   const [loading, setLoading] = useState(true)

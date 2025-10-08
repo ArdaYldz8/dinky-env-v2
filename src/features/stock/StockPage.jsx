@@ -20,6 +20,7 @@ export default function StockPage() {
   const [unitFilter, setUnitFilter] = useState('')
   const [categories, setCategories] = useState([])
   const [units, setUnits] = useState([])
+  const [projects, setProjects] = useState([])
 
   const [formData, setFormData] = useState({
     item_name: '',
@@ -34,6 +35,7 @@ export default function StockPage() {
   const [movementData, setMovementData] = useState({
     movement_type: 'Giriş',
     quantity: 0,
+    project_id: '',
     notes: '',
   })
 
@@ -48,15 +50,32 @@ export default function StockPage() {
 
   useEffect(() => {
     fetchFilterOptions()
+    fetchProjects()
   }, [])
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, project_name, status')
+        .eq('status', 'Aktif')
+        .order('project_name')
+
+      if (error) throw error
+      setProjects(data || [])
+    } catch (error) {
+      console.error('Projeler yüklenemedi:', error)
+    }
+  }
 
   const fetchFilterOptions = async () => {
     try {
-      // Get all categories including null with counts
+      // Get all categories including null with counts (exclude project materials)
       const { data: categoryData } = await supabase
         .from('stock_items')
         .select('category')
         .eq('is_active', true)
+        .eq('is_project_material', false)
 
       const categoryCounts = categoryData?.reduce((acc, item) => {
         const cat = item.category || '(Kategorisiz)'
@@ -75,11 +94,12 @@ export default function StockPage() {
 
       setCategories(categoryList)
 
-      // Get all units including null with counts
+      // Get all units including null with counts (exclude project materials)
       const { data: unitData } = await supabase
         .from('stock_items')
         .select('unit')
         .eq('is_active', true)
+        .eq('is_project_material', false)
 
       const unitCounts = unitData?.reduce((acc, item) => {
         const unit = item.unit || '(Birimsiz)'
@@ -106,11 +126,12 @@ export default function StockPage() {
     try {
       setLoading(true)
 
-      // Start with base query - always filter active items
+      // Start with base query - always filter active items and exclude project materials
       let query = supabase
         .from('stock_items')
         .select('*', { count: 'exact' })
         .eq('is_active', true)
+        .eq('is_project_material', false)
 
       // Apply category filter first (server-side)
       if (categoryFilter) {
@@ -270,6 +291,7 @@ export default function StockPage() {
     setMovementData({
       movement_type: 'Giriş',
       quantity: 0,
+      project_id: '',
       notes: '',
     })
     setIsMovementModalOpen(true)
@@ -314,6 +336,7 @@ export default function StockPage() {
           item_id: selectedItemForMovement.id,
           movement_type: movementData.movement_type,
           quantity: quantity,
+          project_id: movementData.project_id || null,
           notes: movementData.notes.trim() || null,
         }])
 
@@ -794,6 +817,30 @@ export default function StockPage() {
               Mevcut stok: {selectedItemForMovement?.current_stock} {selectedItemForMovement?.unit}
             </p>
           </div>
+
+          {movementData.movement_type === 'Çıkış' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Proje {movementData.movement_type === 'Çıkış' && <span className="text-red-500">*</span>}
+              </label>
+              <select
+                required={movementData.movement_type === 'Çıkış'}
+                value={movementData.project_id}
+                onChange={(e) => setMovementData({ ...movementData, project_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                <option value="">Proje seçiniz...</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.project_name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Stok çıkışları için proje seçimi zorunludur
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
