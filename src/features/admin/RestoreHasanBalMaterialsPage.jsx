@@ -206,11 +206,9 @@ export default function RestoreHasanBalMaterialsPage() {
         const material = allMaterials.find(m => m.item_code === movement.item_code)
         if (material) {
           movementsWithIds.push({
-            stock_item_id: material.id,
+            item_id: material.id,
             quantity: movement.quantity,
             movement_type: movement.movement_type,
-            movement_date: new Date().toISOString(),
-            reference_no: movement.reference_no,
             notes: movement.notes
           })
         }
