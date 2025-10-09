@@ -24,6 +24,8 @@ const ProjectDetailPage = lazy(() => import('./features/projects/ProjectDetailPa
 const QualityControlPage = lazy(() => import('./features/quality-control/QualityControlPage'))
 const RestoreMaterialsPage = lazy(() => import('./features/admin/RestoreMaterialsPage'))
 const RestoreHKuruMaterialsPage = lazy(() => import('./features/admin/RestoreHKuruMaterialsPage'))
+const RestoreAgbeyliMaterialsPage = lazy(() => import('./features/admin/RestoreAgbeyliMaterialsPage'))
+const RestoreHasanBalMaterialsPage = lazy(() => import('./features/admin/RestoreHasanBalMaterialsPage'))
 
 // Loading fallback component
 function PageLoader() {
@@ -77,6 +79,8 @@ function App() {
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="admin/restore-materials" element={<RestoreMaterialsPage />} />
                 <Route path="admin/restore-hkuru" element={<RestoreHKuruMaterialsPage />} />
+                <Route path="admin/restore-agbeyli" element={<RestoreAgbeyliMaterialsPage />} />
+                <Route path="admin/restore-hasanbal" element={<RestoreHasanBalMaterialsPage />} />
               </Route>
             </Routes>
           </Suspense>
