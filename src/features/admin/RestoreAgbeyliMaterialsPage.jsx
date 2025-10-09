@@ -175,6 +175,18 @@ export default function RestoreAgbeyliMaterialsPage() {
       setLoading(true)
       setMessage('')
 
+      // 0. AGBEYLI projesini bul
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id')
+        .ilike('project_name', '%AGBEYLI%')
+        .single()
+
+      if (!project) {
+        setMessage('❌ AGBEYLI projesi bulunamadı. Önce projeyi oluşturun.')
+        return
+      }
+
       // 1. Önce mevcut malzemeleri kontrol et
       const { data: existingMaterials } = await supabase
         .from('stock_items')
@@ -216,6 +228,7 @@ export default function RestoreAgbeyliMaterialsPage() {
             item_id: material.id,
             quantity: movement.quantity,
             movement_type: movement.movement_type,
+            project_id: project.id,
             notes: movement.notes
           })
         }

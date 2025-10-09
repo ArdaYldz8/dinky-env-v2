@@ -168,6 +168,18 @@ export default function RestoreHasanBalMaterialsPage() {
       setLoading(true)
       setMessage('')
 
+      // 0. HASAN BAL projesini bul
+      const { data: project } = await supabase
+        .from('projects')
+        .select('id')
+        .ilike('project_name', '%HASAN%BAL%')
+        .single()
+
+      if (!project) {
+        setMessage('❌ HASAN BAL projesi bulunamadı. Önce projeyi oluşturun.')
+        return
+      }
+
       // 1. Önce mevcut malzemeleri kontrol et
       const { data: existingMaterials } = await supabase
         .from('stock_items')
@@ -209,6 +221,7 @@ export default function RestoreHasanBalMaterialsPage() {
             item_id: material.id,
             quantity: movement.quantity,
             movement_type: movement.movement_type,
+            project_id: project.id,
             notes: movement.notes
           })
         }
