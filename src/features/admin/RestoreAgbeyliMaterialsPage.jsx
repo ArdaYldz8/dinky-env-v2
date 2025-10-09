@@ -219,30 +219,28 @@ export default function RestoreAgbeyliMaterialsPage() {
         allMaterials = [...allMaterials, ...(data || [])]
       }
 
-      // 4. Her malzeme için ID'sini bul ve stok hareketlerini ekle
-      const movementsWithIds = []
-      for (const movement of stockMovements) {
-        const material = allMaterials.find(m => m.item_code === movement.item_code)
-        if (material) {
-          movementsWithIds.push({
-            item_id: material.id,
-            quantity: movement.quantity,
-            movement_type: movement.movement_type,
-            project_id: project.id,
-            notes: movement.notes
-          })
-        }
-      }
+      // 4. Helper function to find item (İlhan pattern)
+      const findItem = (code) => allMaterials.find(item => item.item_code === code)
+
+      // 5. Create movements with proper dates (İlhan pattern)
+      const movements = stockMovements.map(movement => ({
+        item_id: findItem(movement.item_code).id,
+        quantity: movement.quantity,
+        movement_type: movement.movement_type,
+        project_id: project.id,
+        notes: movement.notes,
+        movement_date: new Date().toISOString().split('T')[0]
+      }))
 
       const { error: movementsError } = await supabase
         .from('stock_movements')
-        .insert(movementsWithIds)
+        .insert(movements)
 
       if (movementsError) throw movementsError
 
       const newCount = newMaterials.length
       const existingCount = existingCodes.size
-      setMessage(`✅ Başarılı! ${newCount} yeni malzeme eklendi, ${existingCount} mevcut malzeme kullanıldı. ${movementsWithIds.length} stok hareketi eklendi.`)
+      setMessage(`✅ Başarılı! ${newCount} yeni malzeme eklendi, ${existingCount} mevcut malzeme kullanıldı. ${movements.length} stok hareketi eklendi.`)
     } catch (error) {
       console.error('Restore hatası:', error)
       setMessage(`❌ Hata: ${error.message}`)
