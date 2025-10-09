@@ -168,18 +168,42 @@ export default function RestoreHasanBalMaterialsPage() {
       setLoading(true)
       setMessage('')
 
-      // 1. Malzemeleri ekle
-      const { data: insertedMaterials, error: materialsError } = await supabase
+      // 1. Önce mevcut malzemeleri kontrol et
+      const { data: existingMaterials } = await supabase
         .from('stock_items')
-        .insert(materials)
-        .select()
+        .select('item_code, id')
+        .in('item_code', materials.map(m => m.item_code))
 
-      if (materialsError) throw materialsError
+      const existingCodes = new Map(existingMaterials?.map(m => [m.item_code, m.id]) || [])
+      const newMaterials = materials.filter(m => !existingCodes.has(m.item_code))
 
-      // 2. Her malzeme için ID'sini bul ve stok hareketlerini ekle
+      let allMaterials = []
+
+      // 2. Sadece yeni malzemeleri ekle
+      if (newMaterials.length > 0) {
+        const { data, error: materialsError } = await supabase
+          .from('stock_items')
+          .insert(newMaterials)
+          .select()
+
+        if (materialsError) throw materialsError
+        allMaterials = data
+      }
+
+      // 3. Mevcut malzemeleri de listeye ekle
+      if (existingCodes.size > 0) {
+        const { data } = await supabase
+          .from('stock_items')
+          .select('*')
+          .in('item_code', Array.from(existingCodes.keys()))
+
+        allMaterials = [...allMaterials, ...(data || [])]
+      }
+
+      // 4. Her malzeme için ID'sini bul ve stok hareketlerini ekle
       const movementsWithIds = []
       for (const movement of stockMovements) {
-        const material = insertedMaterials.find(m => m.item_code === movement.item_code)
+        const material = allMaterials.find(m => m.item_code === movement.item_code)
         if (material) {
           movementsWithIds.push({
             stock_item_id: material.id,
@@ -198,7 +222,9 @@ export default function RestoreHasanBalMaterialsPage() {
 
       if (movementsError) throw movementsError
 
-      setMessage(`✅ Başarılı! ${materials.length} malzeme ve ${stockMovements.length} stok hareketi eklendi.`)
+      const newCount = newMaterials.length
+      const existingCount = existingCodes.size
+      setMessage(`✅ Başarılı! ${newCount} yeni malzeme eklendi, ${existingCount} mevcut malzeme kullanıldı. ${movementsWithIds.length} stok hareketi eklendi.`)
     } catch (error) {
       console.error('Restore hatası:', error)
       setMessage(`❌ Hata: ${error.message}`)
